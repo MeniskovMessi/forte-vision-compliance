@@ -17,6 +17,7 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
   const [duration, setDuration] = useState(0)
   const [playbackRate, setPlaybackRate] = useState(1)
   const [videoResolution, setVideoResolution] = useState(null)
+  const [trimRange, setTrimRange] = useState([0, 0])
 
   // Detections state: initially empty (invisible blue lines until analysis)
   const [detections, setDetections] = useState([])
@@ -26,7 +27,9 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
   // Listen to video events
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
-      setDuration(videoRef.current.duration || 0)
+      const dur = videoRef.current.duration || 0
+      setDuration(dur)
+      setTrimRange([0, dur])
       setVideoResolution({
         width: videoRef.current.videoWidth,
         height: videoRef.current.videoHeight,
@@ -289,6 +292,9 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
             currentTime={currentTime}
             onSeek={handleSeek}
             detections={detections}
+            trimStart={trimRange[0]}
+            trimEnd={trimRange[1]}
+            onTrimChange={(start, end) => setTrimRange([start, end])}
             darkMode={darkMode}
           />
 
@@ -337,6 +343,15 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
               <span className="text-gray-400 dark:text-zinc-500">Длительность</span>
               <span className="text-gray-800 dark:text-gray-200">
                 {duration ? `${duration.toFixed(1)} с` : '—'}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-gray-400 dark:text-zinc-500">Зона обрезки</span>
+              <span className="text-gray-800 dark:text-gray-200 text-[11px]">
+                {trimRange[1] > 0
+                  ? `${trimRange[0].toFixed(1)} с — ${trimRange[1].toFixed(1)} с`
+                  : '—'}
               </span>
             </div>
 

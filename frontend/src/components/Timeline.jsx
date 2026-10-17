@@ -5,10 +5,34 @@ export default function Timeline({
   currentTime = 0,
   onSeek,
   detections = [],
+  trimStart: externalTrimStart,
+  trimEnd: externalTrimEnd,
+  onTrimChange,
   darkMode,
 }) {
   const trackRef = useRef(null)
-  const [isScrubbing, setIsScrubbing] = useState(false)
+
+  // Local trim state (defaults to [0, duration])
+  const [internalTrimStart, setInternalTrimStart] = useState(0)
+  const [internalTrimEnd, setInternalTrimEnd] = useState(duration || 30)
+
+  const trimStart = externalTrimStart !== undefined ? externalTrimStart : internalTrimStart
+  const trimEnd = externalTrimEnd !== undefined ? externalTrimEnd : internalTrimEnd
+
+  // Sync trimEnd with duration on video load if needed
+  useEffect(() => {
+    if (duration > 0 && (trimEnd === 0 || trimEnd > duration)) {
+      setInternalTrimEnd(duration)
+      if (onTrimChange) onTrimChange(trimStart, duration)
+    }
+  }, [duration])
+
+  // Scrubbing & dragging states
+  // dragTarget: 'time' (playhead) | 'trimStart' (left handle) | 'trimEnd' (right handle) | 'trimRange' (shift whole red bar)
+  const [dragTarget, setDragTarget] = useState(null)
+  const dragStartRef = useRef({ startX: 0, initialTrimStart: 0, initialTrimEnd: 0 })
+
+  // Detection hover tooltip
   const [hoveredDetection, setHoveredDetection] = useState(null)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
 
@@ -27,33 +51,100 @@ export default function Timeline({
     return Math.min(100, Math.max(0, (time / duration) * 100))
   }
 
-  // Handle click / drag to scrub
-  const handleScrub = useCallback(
-    (e) => {
-      if (!trackRef.current || !duration || duration <= 0) return
+  // Convert mouse clientX to seconds along track width
+  const getTimeFromClientX = useCallback(
+    (clientX) => {
+      if (!trackRef.current || !duration || duration <= 0) return 0
       const rect = trackRef.current.getBoundingClientRect()
-      const clientX = e.clientX || (e.touches && e.touches[0]?.clientX) || 0
       const x = Math.max(0, Math.min(rect.width, clientX - rect.left))
-      const targetTime = (x / rect.width) * duration
-      if (onSeek) onSeek(targetTime)
+      return (x / rect.width) * duration
     },
-    [duration, onSeek]
+    [duration]
   )
 
-  const handleMouseDown = (e) => {
-    setIsScrubbing(true)
-    handleScrub(e)
+  // 1. Time Indicator (Playhead) Scrubbing in the UPPER GRAY TIMELINE REGION
+  const handleTimeIndicatorMouseDown = (e) => {
+    e.stopPropagation()
+    setDragTarget('time')
+    const t = getTimeFromClientX(e.clientX)
+    if (onSeek) onSeek(t)
   }
 
+  // 2. Trimmer Handle (Left) Mouse Down
+  const handleTrimStartMouseDown = (e) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setDragTarget('trimStart')
+    dragStartRef.current = { startX: e.clientX, initialTrimStart: trimStart, initialTrimEnd: trimEnd }
+  }
+
+  // 3. Trimmer Handle (Right) Mouse Down
+  const handleTrimEndMouseDown = (e) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setDragTarget('trimEnd')
+    dragStartRef.current = { startX: e.clientX, initialTrimStart: trimStart, initialTrimEnd: trimEnd }
+  }
+
+  // 4. Trimmer Body (Red horizontal line) Mouse Down - shifts the entire trim segment
+  const handleTrimRangeMouseDown = (e) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setDragTarget('trimRange')
+    dragStartRef.current = { startX: e.clientX, initialTrimStart: trimStart, initialTrimEnd: trimEnd }
+  }
+
+  // Global Dragging Listener
   useEffect(() => {
     const handleMouseMove = (e) => {
-      if (isScrubbing) handleScrub(e)
-    }
-    const handleMouseUp = () => {
-      if (isScrubbing) setIsScrubbing(false)
+      if (!dragTarget || !duration || duration <= 0) return
+
+      if (dragTarget === 'time') {
+        // Scrubbing time indicator (playhead)
+        const t = getTimeFromClientX(e.clientX)
+        if (onSeek) onSeek(t)
+      } else if (dragTarget === 'trimStart') {
+        // Dragging left trimmer handle
+        const rawTime = getTimeFromClientX(e.clientX)
+        const clampedStart = Math.max(0, Math.min(trimEnd - 0.4, rawTime))
+        setInternalTrimStart(clampedStart)
+        if (onTrimChange) onTrimChange(clampedStart, trimEnd)
+      } else if (dragTarget === 'trimEnd') {
+        // Dragging right trimmer handle
+        const rawTime = getTimeFromClientX(e.clientX)
+        const clampedEnd = Math.min(duration, Math.max(trimStart + 0.4, rawTime))
+        setInternalTrimEnd(clampedEnd)
+        if (onTrimChange) onTrimChange(trimStart, clampedEnd)
+      } else if (dragTarget === 'trimRange') {
+        // Dragging the whole red trimmer segment
+        if (!trackRef.current) return
+        const rect = trackRef.current.getBoundingClientRect()
+        const deltaX = e.clientX - dragStartRef.current.startX
+        const deltaTime = (deltaX / rect.width) * duration
+        const span = dragStartRef.current.initialTrimEnd - dragStartRef.current.initialTrimStart
+
+        let newStart = dragStartRef.current.initialTrimStart + deltaTime
+        let newEnd = newStart + span
+
+        if (newStart < 0) {
+          newStart = 0
+          newEnd = span
+        } else if (newEnd > duration) {
+          newEnd = duration
+          newStart = Math.max(0, duration - span)
+        }
+
+        setInternalTrimStart(newStart)
+        setInternalTrimEnd(newEnd)
+        if (onTrimChange) onTrimChange(newStart, newEnd)
+      }
     }
 
-    if (isScrubbing) {
+    const handleMouseUp = () => {
+      if (dragTarget) setDragTarget(null)
+    }
+
+    if (dragTarget) {
       window.addEventListener('mousemove', handleMouseMove)
       window.addEventListener('mouseup', handleMouseUp)
       window.addEventListener('touchmove', handleMouseMove)
@@ -65,7 +156,7 @@ export default function Timeline({
       window.removeEventListener('touchmove', handleMouseMove)
       window.removeEventListener('touchend', handleMouseUp)
     }
-  }, [isScrubbing, handleScrub])
+  }, [dragTarget, duration, trimStart, trimEnd, getTimeFromClientX, onSeek, onTrimChange])
 
   // Build ticks for top ruler line
   const tickCount = 20
@@ -76,23 +167,30 @@ export default function Timeline({
     return { percent, time, isMajor }
   })
 
+  const trimStartPct = getPercent(trimStart)
+  const trimEndPct = getPercent(trimEnd)
+  const trimWidthPct = Math.max(0, trimEndPct - trimStartPct)
+
   return (
     <div className="w-full flex flex-col select-none px-6 pt-2 pb-1">
       {/* 
-        Timeline Interaction Container:
-        Encompasses both the top timeline line and the parallel red trimmer underneath
+        Timeline Interaction Container
       */}
       <div
         ref={trackRef}
-        onMouseDown={handleMouseDown}
-        className="relative w-full cursor-pointer py-2 overflow-visible"
+        className="relative w-full py-1 overflow-visible"
       >
         {/* ========================================================================= */}
-        {/* 1. TOP TIMELINE LINE WITH VERTICAL TICK MARKS & TIMECODES ON TOP           */}
+        {/* 1. UPPER GRAY TIMELINE REGION:                                            */}
+        {/*    Clicking or dragging HERE affects the TIME INDICATOR (Playhead)        */}
         {/* ========================================================================= */}
-        <div className="relative w-full h-8 mb-2">
-          {/* Main Horizontal Timeline Line */}
-          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-300 dark:bg-zinc-700" />
+        <div
+          onMouseDown={handleTimeIndicatorMouseDown}
+          className="relative w-full h-8 mb-2 cursor-pointer group/gray"
+          title="Кликните на серой шкале времени для перемещения указателя времени"
+        >
+          {/* Main Horizontal Timeline Gray Line */}
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-300 dark:bg-zinc-700 transition-colors group-hover/gray:bg-gray-400 dark:group-hover/gray:bg-zinc-600" />
 
           {/* Vertical tick marks on top of the line with small text */}
           {ticks.map((tick, idx) => (
@@ -146,69 +244,96 @@ export default function Timeline({
         </div>
 
         {/* ========================================================================= */}
-        {/* 2. PARALLEL RED TRIMMER LINE WITH 2 END HANDLES DIRECTED DOWNWARDS         */}
+        {/* 2. LOWER RED TRIMMER REGION:                                              */}
+        {/*    Clicking or dragging HERE ONLY affects the TRIMMER, NOT time indicator */}
         {/* ========================================================================= */}
-        <div className="relative w-full h-6 pointer-events-none">
-          {/* Parallel Red Horizontal Line */}
-          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
+        <div className="relative w-full h-7">
+          {/* Subtle inactive guide track underneath */}
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gray-200/50 dark:bg-zinc-800/40" />
 
-          {/* Left Trimmer Handle (directed downwards at left end) */}
-          <div className="absolute top-0 left-0 -translate-x-[1px]">
-            <svg
-              width="14"
-              height="22"
-              viewBox="0 0 14 22"
-              fill="none"
-              className="text-red-500 filter drop-shadow-sm"
-            >
-              {/* Vertical drop leg going downwards with bottom foot pointing inwards */}
-              <path
-                d="M1.5 0V18H10"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {/* Tactile grip ticks on the downward handle */}
-              <line x1="1.5" y1="6" x2="6.5" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <line x1="1.5" y1="12" x2="6.5" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </div>
+          {/* Active Red Trimmer Line between trimStart and trimEnd */}
+          <div
+            onMouseDown={handleTrimRangeMouseDown}
+            style={{
+              left: `${trimStartPct}%`,
+              width: `${trimWidthPct}%`,
+            }}
+            className="absolute top-0 h-[2.5px] bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)] cursor-grab active:cursor-grabbing group/trimline"
+            title="Перетащите красный отрезок для смещения зоны анализа"
+          >
+            {/* Subtle glow on hover of the red line */}
+            <div className="absolute inset-0 -top-1 -bottom-1 bg-red-500/10 opacity-0 group-hover/trimline:opacity-100 transition-opacity" />
 
-          {/* Right Trimmer Handle (directed downwards at right end) */}
-          <div className="absolute top-0 right-0 translate-x-[1px]">
-            <svg
-              width="14"
-              height="22"
-              viewBox="0 0 14 22"
-              fill="none"
-              className="text-red-500 filter drop-shadow-sm"
+            {/* 
+              LEFT TRIMMER HANDLE: Directed downwards at left end (⎾)
+            */}
+            <div
+              onMouseDown={handleTrimStartMouseDown}
+              className="absolute top-0 left-0 -translate-x-1/2 w-6 h-8 flex flex-col items-center justify-start cursor-ew-resize group/lhandle z-20"
+              title={`Начало обрезки: ${formatTimecode(trimStart)} (потяните для изменения)`}
             >
-              {/* Vertical drop leg going downwards with bottom foot pointing inwards */}
-              <path
-                d="M12.5 0V18H4"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {/* Tactile grip ticks on the downward handle */}
-              <line x1="12.5" y1="6" x2="7.5" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              <line x1="12.5" y1="12" x2="7.5" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+              <svg
+                width="14"
+                height="22"
+                viewBox="0 0 14 22"
+                fill="none"
+                className="text-red-500 filter drop-shadow-sm group-hover/lhandle:text-red-400 transition-colors"
+              >
+                {/* Vertical drop leg going downwards with bottom foot pointing inwards */}
+                <path
+                  d="M1.5 0V18H10"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <line x1="1.5" y1="6" x2="6.5" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="1.5" y1="12" x2="6.5" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </div>
+
+            {/* 
+              RIGHT TRIMMER HANDLE: Directed downwards at right end (⏋)
+            */}
+            <div
+              onMouseDown={handleTrimEndMouseDown}
+              className="absolute top-0 right-0 translate-x-1/2 w-6 h-8 flex flex-col items-center justify-start cursor-ew-resize group/rhandle z-20"
+              title={`Конец обрезки: ${formatTimecode(trimEnd)} (потяните для изменения)`}
+            >
+              <svg
+                width="14"
+                height="22"
+                viewBox="0 0 14 22"
+                fill="none"
+                className="text-red-500 filter drop-shadow-sm group-hover/rhandle:text-red-400 transition-colors"
+              >
+                {/* Vertical drop leg going downwards with bottom foot pointing inwards */}
+                <path
+                  d="M12.5 0V18H4"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <line x1="12.5" y1="6" x2="7.5" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="12.5" y1="12" x2="7.5" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </div>
           </div>
         </div>
 
         {/* ========================================================================= */}
-        {/* 3. PLAYHEAD SCRUBBER NEEDLE (Crosses vertically across both lines)        */}
+        {/* 3. TIME INDICATOR (PLAYHEAD NEEDLE):                                      */}
+        {/*    Crosses vertically across both lines, moves ONLY with video playback   */}
+        {/*    or when scrubbing the upper gray timeline                              */}
         {/* ========================================================================= */}
         <div
           style={{ left: `${getPercent(currentTime)}%` }}
-          className="absolute top-0 bottom-0 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center"
+          className="absolute top-0 bottom-1 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center"
         >
-          {/* Top Diamond Head */}
+          {/* Top Diamond Pointer */}
           <div className="w-2.5 h-2.5 bg-red-500 rotate-45 rounded-[1px] shadow-sm transform -translate-y-0.5" />
-          {/* Needle Line spanning across timeline and trimmer */}
+          {/* Vertical Playhead Needle Line */}
           <div className="w-[2px] flex-1 bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
         </div>
       </div>
