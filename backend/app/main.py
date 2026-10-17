@@ -53,17 +53,22 @@ app.add_middleware(
 
 app.include_router(v1_router)
 
-
-@app.get("/", tags=["Root"])
-async def root():
-    return {
-        "service": settings.PROJECT_NAME,
-        "version": settings.VERSION,
-        "docs_url": "/docs",
-        "health_url": "/api/v1/health",
-        "analyze_endpoint": "POST /api/v1/analyze",
-        "job_status_endpoint": "GET /api/v1/jobs/{job_id}",
-    }
+# Mount test_front/dist static files if built so http://localhost:8000 serves the Prism Web UI
+test_front_dist = Path(__file__).resolve().parent.parent.parent / "test_front" / "dist"
+if test_front_dist.exists():
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/", StaticFiles(directory=str(test_front_dist), html=True), name="test_front")
+else:
+    @app.get("/", tags=["Root"])
+    async def root():
+        return {
+            "service": settings.PROJECT_NAME,
+            "version": settings.VERSION,
+            "docs_url": "/docs",
+            "health_url": "/api/v1/health",
+            "analyze_endpoint": "POST /api/v1/analyze",
+            "job_status_endpoint": "GET /api/v1/jobs/{job_id}",
+        }
 
 
 if __name__ == "__main__":

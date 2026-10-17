@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-page: #F8FAFC;
+    --card-bg: #FFFFFF;
+    --border-color: #E2E8F0;
+  }
+  .dark {
+    --bg-page: #090D16;
+    --card-bg: #111625;
+    --border-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Custom crisp scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.7);
+}
+
+/* Prism spectral chromatic text effect */
+.prism-text-gradient {
+  background: linear-gradient(135deg, #0F172A 0%, #334155 35%, #9D1D53 70%, #BE123C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.dark .prism-text-gradient {
+  background: linear-gradient(135deg, #FFFFFF 0%, #E2E8F0 40%, #F43F5E 75%, #FDA4AF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Glassmorphic card styling */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid #E2E8F0;
+}
+.dark .glass-panel {
+  background: rgba(17, 22, 37, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Huge blur transition for screensaver fadeout */
+.screensaver-overlay {
+  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+              filter 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, filter, transform;
+}
+.screensaver-exiting {
+  opacity: 0 !important;
+  filter: blur(50px) !important;
+  transform: scale(1.08) !important;
+  pointer-events: none !important;
+}
+
+/* Targeting bounding-box reticle corners */
+.reticle-corner {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: #E11D48;
+}
