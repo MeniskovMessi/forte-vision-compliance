@@ -239,10 +239,12 @@ export default function Timeline({
                 }}
                 onMouseLeave={() => setHoveredDetection(null)}
                 style={{ left: `${leftPct}%` }}
-                className="absolute top-3 bottom-[-1px] -translate-x-1/2 z-20 w-3 flex flex-col items-center cursor-pointer group/det"
+                className="absolute top-2 bottom-[-1px] -translate-x-1/2 z-20 w-3 flex flex-col items-center cursor-pointer group/det"
               >
-                {/* Clean vertical blue detection line (Linear flat style, compact height) */}
-                <div className="w-[2px] group-hover/det:w-[3px] h-full bg-sky-500 dark:bg-sky-400 transition-all" />
+                {/* Clean circle on top of detection line (No glow, flat Linear style) */}
+                <div className="w-2 h-2 rounded-full bg-sky-500 dark:bg-sky-400 group-hover/det:scale-125 transition-transform shrink-0" />
+                {/* Vertical blue line dropping to timeline */}
+                <div className="w-[1.5px] flex-1 bg-sky-500 dark:bg-sky-400" />
               </div>
             )
           })}
