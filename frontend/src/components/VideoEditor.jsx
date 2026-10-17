@@ -5,10 +5,8 @@ import {
   Sparkles,
   Loader2,
   CheckCircle2,
-  Film,
 } from 'lucide-react'
 import Timeline from './Timeline'
-import TransportControls from './TransportControls'
 
 export default function VideoEditor({ videoData, onBack, darkMode }) {
   const videoRef = useRef(null)
@@ -247,11 +245,11 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
 
         {/* 
           Video Preview Container:
-          Strictly 70% of left column height as requested, perfectly centered
+          Dynamically fills available space above the timeline
         */}
         <div
           onClick={handlePlayPauseToggle}
-          className="h-[70%] min-h-0 bg-[#07080B] relative flex items-center justify-center p-3 sm:p-4 overflow-hidden cursor-pointer group shrink-0"
+          className="flex-1 min-h-0 bg-[#07080B] relative flex items-center justify-center p-3 sm:p-4 overflow-hidden cursor-pointer group"
         >
           <video
             ref={videoRef}
@@ -274,10 +272,10 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
         </div>
 
         {/* 
-          Timeline & Transport Controls:
-          Occupies remaining 30% height (always 100% visible, seamless borders)
+          Unified Timeline & Transport Control Section:
+          No separate bottom bar or internal borders — perfectly flush and visible
         */}
-        <div className="h-[30%] min-h-[130px] shrink-0 flex flex-col justify-between border-t border-gray-200/40 dark:border-[#1A1E26] bg-gray-50/30 dark:bg-[#0A0D12] overflow-hidden">
+        <div className="shrink-0 border-t border-gray-200/40 dark:border-[#1A1E26] bg-gray-50/20 dark:bg-[#0A0D12]">
           <Timeline
             duration={duration}
             currentTime={currentTime}
@@ -286,21 +284,12 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
             trimStart={trimRange[0]}
             trimEnd={trimRange[1]}
             onTrimChange={(start, end) => setTrimRange([start, end])}
-            darkMode={darkMode}
-          />
-
-          <TransportControls
             isPlaying={isPlaying}
             onTogglePlay={handlePlayPauseToggle}
             onPrevCheckpoint={handlePrevCheckpoint}
             onNextCheckpoint={handleNextCheckpoint}
-            onJumpToStart={handleJumpToStart}
-            onJumpToEnd={handleJumpToEnd}
-            currentTime={currentTime}
-            duration={duration}
             playbackRate={playbackRate}
             onChangePlaybackRate={handleChangePlaybackRate}
-            detectionsCount={detections.length}
             darkMode={darkMode}
           />
         </div>

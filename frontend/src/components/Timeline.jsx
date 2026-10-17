@@ -1,4 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react'
+import { Play, Pause, SkipBack, SkipForward, Gauge } from 'lucide-react'
 
 export default function Timeline({
   duration = 0,
@@ -8,6 +9,12 @@ export default function Timeline({
   trimStart: externalTrimStart,
   trimEnd: externalTrimEnd,
   onTrimChange,
+  isPlaying = false,
+  onTogglePlay,
+  onPrevCheckpoint,
+  onNextCheckpoint,
+  playbackRate = 1,
+  onChangePlaybackRate,
   darkMode,
 }) {
   const trackRef = useRef(null)
@@ -172,7 +179,7 @@ export default function Timeline({
   const trimWidthPct = Math.max(0, trimEndPct - trimStartPct)
 
   return (
-    <div className="w-full flex flex-col select-none px-6 pt-2 pb-1">
+    <div className="w-full flex flex-col select-none px-6 pt-3 pb-3">
       {/* 
         Timeline Interaction Container
       */}
@@ -336,6 +343,86 @@ export default function Timeline({
           <div className="w-2 h-2 bg-red-500 rotate-45 rounded-[1px] transform -translate-y-0.5" />
           {/* Vertical Playhead Needle Line (Flat line, compact height) */}
           <div className="w-[1.5px] flex-1 bg-red-500" />
+        </div>
+      </div>
+
+      {/* 
+        =========================================================================
+        INTEGRATED CONTROLS ROW:
+        Moved up directly to the timeline section — no separation, no borders
+        =========================================================================
+      */}
+      <div className="w-full mt-3 flex items-center justify-between select-none">
+        {/* Left: Digital Timecode Counter */}
+        <div className="flex items-center space-x-3">
+          <div className="flex items-baseline space-x-1 font-mono text-xs">
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {formatTimecode(currentTime)}
+            </span>
+            <span className="text-gray-400 dark:text-zinc-600">/</span>
+            <span className="text-gray-500 dark:text-zinc-400 text-[11px]">
+              {formatTimecode(duration)}
+            </span>
+          </div>
+
+          {detections.length > 0 && (
+            <span className="hidden sm:inline-flex items-center space-x-1.5 px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+              <span>Нарушений: {detections.length}</span>
+            </span>
+          )}
+        </div>
+
+        {/* Center: Move Left, Play/Pause, Move Right Buttons */}
+        <div className="flex items-center space-x-1.5">
+          {/* Move Left: to previous detected checkpoint or to the beginning */}
+          <button
+            onClick={onPrevCheckpoint}
+            className="p-1.5 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-[#1E232B] hover:text-gray-900 dark:hover:text-white transition active:scale-95"
+            title="Перейти к предыдущему нарушению или в начало (Стрелка влево)"
+          >
+            <SkipBack className="w-4 h-4" />
+          </button>
+
+          {/* Play/Pause Button (Flat Linear style) */}
+          <button
+            onClick={onTogglePlay}
+            className="w-8 h-8 rounded-md bg-[#9D1D53] hover:bg-[#861846] text-white flex items-center justify-center transition active:scale-95"
+            title={isPlaying ? 'Пауза (Пробел)' : 'Воспроизведение (Пробел)'}
+          >
+            {isPlaying ? (
+              <Pause className="w-3.5 h-3.5 fill-white" />
+            ) : (
+              <Play className="w-3.5 h-3.5 fill-white translate-x-0.5" />
+            )}
+          </button>
+
+          {/* Move Right: to next detected checkpoint or to the end */}
+          <button
+            onClick={onNextCheckpoint}
+            className="p-1.5 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-[#1E232B] hover:text-gray-900 dark:hover:text-white transition active:scale-95"
+            title="Перейти к следующему нарушению или в конец (Стрелка вправо)"
+          >
+            <SkipForward className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Right: Playback Speed Toggle */}
+        <div className="flex items-center space-x-2">
+          {onChangePlaybackRate && (
+            <button
+              onClick={() => {
+                const rates = [1, 1.5, 2]
+                const nextIdx = (rates.indexOf(playbackRate) + 1) % rates.length
+                onChangePlaybackRate(rates[nextIdx])
+              }}
+              className="flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-mono text-gray-600 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-[#1E232B] border border-gray-200/60 dark:border-[#22272E] transition"
+              title="Скорость воспроизведения"
+            >
+              <Gauge className="w-3 h-3" />
+              <span>{playbackRate}x</span>
+            </button>
+          )}
         </div>
       </div>
 
