@@ -4,7 +4,6 @@ import {
   FileVideo,
   Sparkles,
   Loader2,
-  CheckCircle2,
 } from 'lucide-react'
 import Timeline from './Timeline'
 
@@ -222,25 +221,6 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
               <span className="truncate">{videoData?.name}</span>
             </div>
           </div>
-
-          {/* Status badge */}
-          <div className="flex items-center space-x-2 text-[11px] font-mono">
-            {analysisStatus === 'done' ? (
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center space-x-1">
-                <CheckCircle2 className="w-3 h-3" />
-                <span>Проанализировано</span>
-              </span>
-            ) : analysisStatus === 'analyzing' ? (
-              <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center space-x-1 animate-pulse">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                <span>Анализ...</span>
-              </span>
-            ) : (
-              <span className="text-gray-400 dark:text-zinc-500">
-                Ожидает анализа
-              </span>
-            )}
-          </div>
         </div>
 
         {/* 
@@ -302,14 +282,6 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
       */}
       <div className="w-full md:w-80 lg:w-88 shrink-0 h-full flex flex-col justify-between bg-white dark:bg-[#0D0F12] overflow-y-auto">
         <div className="flex flex-col">
-          {/* Section Header */}
-          <div className="px-5 py-3.5 border-b border-gray-200/30 dark:border-[#1A1E26] flex items-center justify-between shrink-0">
-            <span className="text-[11px] font-mono uppercase tracking-[0.2em] font-semibold text-gray-400 dark:text-zinc-400">
-              Инспектор сессии
-            </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#9D1D53]" />
-          </div>
-
           {/* Seamless Metadata Rows (No nested cards, clean tabular layout) */}
           <div className="px-5 py-4 space-y-3 border-b border-gray-200/30 dark:border-[#1A1E26]">
             <div className="flex items-center justify-between text-xs font-mono">
