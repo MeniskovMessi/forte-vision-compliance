@@ -5,8 +5,12 @@ import {
   Sparkles,
   Loader2,
   Trash2,
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
 } from 'lucide-react'
 import Timeline from './Timeline'
+import { submitVideoAnalysis, pollJobDetailed, compileVideoCuts } from '../services/api'
 
 export default function VideoEditor({ videoData, onBack, darkMode }) {
   const videoRef = useRef(null)
@@ -17,10 +21,13 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
   const [videoResolution, setVideoResolution] = useState(null)
   const [trimRange, setTrimRange] = useState([0, 0])
 
-  // Detections state: initially empty (invisible blue lines until analysis)
+  // Real backend AI analysis state
   const [detections, setDetections] = useState([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [analysisStatus, setAnalysisStatus] = useState('idle') // 'idle' | 'analyzing' | 'done'
+  const [analysisStatus, setAnalysisStatus] = useState('idle') // 'idle' | 'analyzing' | 'done' | 'error'
+  const [analysisError, setAnalysisError] = useState(null)
+  const [jobId, setJobId] = useState(null)
+  const [jobData, setJobData] = useState(null)
 
   // Selected violation intervals for export (CapCut / Premiere style tracks)
   const [selectedIntervals, setSelectedIntervals] = useState([])
@@ -221,7 +228,7 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
     }
   }
 
-  // Export sequence: compiles selected intervals and merges into 1 video
+  // Export sequence: compiles selected intervals and merges into 1 video via backend
   const handleExportSequence = async () => {
     if (isExportingSequence) return
     setIsExportingSequence(true)
@@ -234,32 +241,17 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
             }))
           : [{ start: trimRange[0], end: trimRange[1] }]
 
-      const formData = new FormData()
-      if (videoData?.file) {
-        formData.append('file', videoData.file)
-      } else if (videoData?.url) {
+      let fileToCompile = videoData?.file
+      if (!fileToCompile && videoData?.url) {
         const resBlob = await fetch(videoData.url).then((r) => r.blob())
-        formData.append('file', resBlob, videoData.name || 'video.mp4')
-      } else {
+        fileToCompile = new File([resBlob], videoData.name || 'video.mp4', { type: 'video/mp4' })
+      }
+
+      if (!fileToCompile) {
         throw new Error('Видеофайл недоступен')
       }
-      formData.append('cuts', JSON.stringify(cuts))
-      formData.append('draw_bbox', 'true')
 
-      const response = await fetch('http://localhost:8000/api/v1/videos/compile-cuts', {
-        method: 'POST',
-        headers: {
-          'X-API-Key': 'forte_test_secret_key_2026',
-        },
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const errText = await response.text()
-        throw new Error(`Ошибка сервера (${response.status}): ${errText}`)
-      }
-
-      const blob = await response.blob()
+      const blob = await compileVideoCuts(fileToCompile, cuts, true)
       const downloadUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
       const baseName = videoData?.name ? videoData.name.replace(/\.[^/.]+$/, '') : 'video'
@@ -296,66 +288,86 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isPlaying, currentTime, duration, detections])
 
-  // Trigger video analysis
+  // Trigger real video analysis through the backend AI pipeline
   const handleAnalyze = async () => {
     if (isAnalyzing) return
     setIsAnalyzing(true)
     setAnalysisStatus('analyzing')
+    setAnalysisError(null)
 
     try {
-      const formData = new FormData()
-      formData.append('file', videoData.file)
+      let fileToAnalyze = videoData?.file
+      if (!fileToAnalyze && videoData?.url) {
+        const resBlob = await fetch(videoData.url).then((r) => r.blob())
+        fileToAnalyze = new File([resBlob], videoData.name || 'cctv_video.mp4', { type: 'video/mp4' })
+      }
 
-      let resultDetections = null
+      if (!fileToAnalyze) {
+        throw new Error('Видеофайл не найден для анализа')
+      }
 
-      try {
-        const response = await fetch('http://localhost:8000/api/v1/analyze', {
-          method: 'POST',
-          headers: {
-            'X-API-Key': 'forte_test_secret_key_2026',
-          },
-          body: formData,
-        })
-        if (response.ok) {
-          const data = await response.json()
-          if (data && data.violations) {
-            resultDetections = data.violations.map((v, i) => ({
-              id: i + 1,
-              timecode: v.timecode_sec || v.timecode || 0,
-              label: v.type || v.violation_type || 'Нарушение кассовой дисциплины',
-              lawRef: v.article || v.clause_ref || 'НБРК',
-            }))
+      // If user selected a custom trimmed interval, pass it to backend
+      const startSec = trimRange[0] > 0 ? trimRange[0] : undefined
+      const endSec = trimRange[1] > 0 && trimRange[1] < duration ? trimRange[1] : undefined
+
+      const submitRes = await submitVideoAnalysis(fileToAnalyze, {
+        startSec,
+        endSec,
+      })
+
+      const submittedJobId = submitRes.job_id
+      setJobId(submittedJobId)
+
+      // Poll until backend completes video inspection, YOLO, and legal RAG
+      let attempts = 0
+      const pollInterval = setInterval(async () => {
+        attempts++
+        try {
+          const detailed = await pollJobDetailed(submittedJobId)
+          if (detailed.status === 'done') {
+            clearInterval(pollInterval)
+            setJobData(detailed)
+
+            const rawViolations = detailed.violations || []
+            const mapped = rawViolations.map((v, i) => {
+              const tc = v.relative_timecode_sec ?? v.timecode_sec ?? 0
+              return {
+                id: i + 1,
+                timecode: parseFloat(Number(tc).toFixed(1)),
+                label: v.type || 'Нарушение кассовой дисциплины',
+                lawRef: v.regulation_reference?.clause_ref || v.regulation_reference?.article || 'НБРК',
+                confidence: v.confidence,
+                ruleCode: v.rule_code,
+                regulation: v.regulation_reference,
+                bboxNorm: v.bbox_norm,
+                evidenceFrames: v.evidence_frames,
+              }
+            })
+
+            setDetections(mapped)
+            setAnalysisStatus('done')
+            setIsAnalyzing(false)
+          } else if (detailed.status === 'failed') {
+            clearInterval(pollInterval)
+            setAnalysisError(detailed.error_message || 'Анализ завершился с ошибкой')
+            setAnalysisStatus('error')
+            setIsAnalyzing(false)
           }
+        } catch (pollErr) {
+          console.warn('Poll error:', pollErr)
         }
-      } catch (networkErr) {
-        // Fallback for offline testing
-      }
 
-      if (!resultDetections) {
-        await new Promise((resolve) => setTimeout(resolve, 1400))
-        const dur = duration || 30
-        resultDetections = [
-          {
-            id: 1,
-            timecode: Math.max(2, parseFloat((dur * 0.28).toFixed(1))),
-            label: 'Оставление кассового узла и наличных денег без присмотра',
-            lawRef: 'Глава 2, пункт 34',
-          },
-          {
-            id: 2,
-            timecode: Math.min(dur - 2, parseFloat((dur * 0.68).toFixed(1))),
-            label: 'Оставление сейфа с ценностями в открытом состоянии',
-            lawRef: 'Глава 2, пункт 36',
-          },
-        ]
-      }
-
-      setDetections(resultDetections)
-      setAnalysisStatus('done')
+        if (attempts > 140) {
+          clearInterval(pollInterval)
+          setAnalysisError('Таймаут ожидания анализа видео (превышено 70 секунд)')
+          setAnalysisStatus('error')
+          setIsAnalyzing(false)
+        }
+      }, 500)
     } catch (e) {
       console.error('Analysis failed:', e)
-      setAnalysisStatus('idle')
-    } finally {
+      setAnalysisError(e.message || 'Ошибка соединения с сервером AI')
+      setAnalysisStatus('error')
       setIsAnalyzing(false)
     }
   }
@@ -512,7 +524,13 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
             <div className="flex items-center justify-between text-xs font-mono">
               <span className="text-gray-400 dark:text-zinc-500">Статус</span>
               <span className="text-gray-800 dark:text-gray-200">
-                {analysisStatus === 'done' ? 'Завершён' : analysisStatus === 'analyzing' ? 'Анализ...' : 'Готов к анализу'}
+                {analysisStatus === 'done'
+                  ? 'Завершён'
+                  : analysisStatus === 'analyzing'
+                  ? 'Анализ нейросетью...'
+                  : analysisStatus === 'error'
+                  ? 'Ошибка'
+                  : 'Готов к анализу'}
               </span>
             </div>
           </div>
@@ -551,14 +569,14 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
             </div>
           )}
 
-          {/* Seamless State Content (No dashed box) */}
+          {/* State Content */}
           {analysisStatus === 'idle' && (
             <div className="px-5 py-6 text-center space-y-1.5">
               <div className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 Видео готово к обработке
               </div>
               <p className="text-[11px] text-gray-400 dark:text-zinc-500 leading-relaxed font-sans max-w-xs mx-auto">
-                Запустите локальные модели детекции нарушений кассовой дисциплины (НБРК).
+                Запустите локальные модели YOLO и нормативную базу НБРК (adilet.zan.kz) для поиска нарушений.
               </p>
             </div>
           )}
@@ -567,48 +585,86 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
             <div className="px-5 py-6 text-center space-y-2">
               <Loader2 className="w-5 h-5 mx-auto text-[#9D1D53] animate-spin" />
               <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
-                Анализ видеопотока...
+                Анализ видеопотока через AI...
               </div>
               <p className="text-[11px] text-gray-400 dark:text-zinc-500 font-sans">
-                Детекция позы кассира, сейфа и сопоставление с нормами
+                Детекция позы кассира, сейфа, кассового узла и поиск статей НБРК в pgvector
+              </p>
+              {jobId && (
+                <div className="text-[10px] font-mono text-gray-400 dark:text-zinc-500">
+                  ID задачи: {jobId}
+                </div>
+              )}
+            </div>
+          )}
+
+          {analysisStatus === 'error' && (
+            <div className="px-5 py-6 text-center space-y-2">
+              <AlertTriangle className="w-5 h-5 mx-auto text-amber-500" />
+              <div className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                Ошибка анализа
+              </div>
+              <p className="text-[11px] text-gray-400 dark:text-zinc-500 font-sans">
+                {analysisError || 'Не удалось выполнить анализ на сервере'}
               </p>
             </div>
           )}
 
           {analysisStatus === 'done' && (
             <div className="px-5 py-4 space-y-3">
-              <div className="flex items-center justify-between text-[11px] font-mono text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
-                <span>Обнаружено нарушений:</span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-sky-500/10 text-sky-500 dark:text-sky-400 border border-sky-500/20">
-                  {detections.length}
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {detections.map((d) => {
-                  const isSelected = selectedIntervals.some((i) => i.detectionId === d.id)
-                  return (
-                    <div
-                      key={d.id}
-                      onClick={() => handleSeek(d.timecode)}
-                      className={`p-2.5 rounded hover:bg-gray-100/60 dark:hover:bg-[#161920] cursor-pointer transition-colors border-l-2 pl-3 space-y-0.5 group ${
-                        isSelected ? 'border-sky-400 bg-sky-50/20 dark:bg-sky-950/10' : 'border-gray-300 dark:border-zinc-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between text-[10px] font-mono text-sky-500">
-                        <span>{d.timecode.toFixed(1)} с</span>
-                        <span className="text-gray-400 dark:text-zinc-500">{d.lawRef}</span>
-                      </div>
-                      <div className="text-xs text-gray-800 dark:text-gray-200 font-medium group-hover:text-sky-400 transition-colors">
-                        {d.label}
-                      </div>
-                      <div className="text-[10px] text-gray-400 dark:text-zinc-500">
-                        {isSelected ? '✓ Выбрано для экспорта' : 'Нажмите маркер на шкале для выбора'}
-                      </div>
+              {detections.length === 0 ? (
+                <div className="p-3 rounded-lg border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 flex items-start space-x-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
+                      Нарушений не обнаружено
                     </div>
-                  )
-                })}
-              </div>
+                    <div className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5 font-sans">
+                      Видео полностью соответствует правилам кассовой дисциплины НБРК.
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between text-[11px] font-mono text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
+                    <span>Обнаружено нарушений:</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-sky-500/10 text-sky-500 dark:text-sky-400 border border-sky-500/20 font-semibold">
+                      {detections.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {detections.map((d) => {
+                      const isSelected = selectedIntervals.some((i) => i.detectionId === d.id)
+                      return (
+                        <div
+                          key={d.id}
+                          onClick={() => handleSeek(d.timecode)}
+                          className={`p-2.5 rounded hover:bg-gray-100/60 dark:hover:bg-[#161920] cursor-pointer transition-colors border-l-2 pl-3 space-y-0.5 group ${
+                            isSelected ? 'border-sky-400 bg-sky-50/20 dark:bg-sky-950/10' : 'border-gray-300 dark:border-zinc-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-[10px] font-mono text-sky-500">
+                            <span>{d.timecode.toFixed(1)} с</span>
+                            <span className="text-gray-400 dark:text-zinc-500">{d.lawRef}</span>
+                          </div>
+                          <div className="text-xs text-gray-800 dark:text-gray-200 font-medium group-hover:text-sky-400 transition-colors">
+                            {d.label}
+                          </div>
+                          {d.confidence && (
+                            <div className="text-[9px] font-mono text-gray-400 dark:text-zinc-500">
+                              Уверенность: {Math.round(d.confidence * 100)}%
+                            </div>
+                          )}
+                          <div className="text-[10px] text-gray-400 dark:text-zinc-500">
+                            {isSelected ? '✓ Выбрано для экспорта' : 'Нажмите маркер на шкале для выбора'}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
