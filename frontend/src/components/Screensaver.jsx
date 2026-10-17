@@ -9,11 +9,11 @@ export default function Screensaver({ onComplete, isReplaying, darkMode }) {
       setStage('exiting')
     }, 1000)
 
-    // Stage 2: 50px blur fadeout completes after 800ms
+    // Stage 2: 1.5s cinematic blur fadeout completes after 1000ms + 1500ms = 2500ms
     const timer2 = setTimeout(() => {
       setStage('hidden')
       if (onComplete) onComplete()
-    }, 1800)
+    }, 2500)
 
     return () => {
       clearTimeout(timer1)
