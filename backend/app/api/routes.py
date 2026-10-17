@@ -415,6 +415,64 @@ async def trim_video_endpoint(
     return result
 
 
+@router.post(
+    "/videos/compile-cuts",
+    summary="Compile multiple selected violation intervals directly from an uploaded video into one single merged .mp4",
+)
+async def compile_direct_video_cuts_endpoint(
+    file: Optional[UploadFile] = File(None),
+    video: Optional[UploadFile] = File(None),
+    cuts: str = Form(..., description="JSON string of [{'start': float, 'end': float}]"),
+    draw_bbox: bool = Form(False),
+):
+    import json
+    uploaded = file or video
+    if uploaded is None or not uploaded.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide a video file under `file` or `video`.",
+        )
+
+    try:
+        raw_cuts = json.loads(cuts) if isinstance(cuts, str) else cuts
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid cuts JSON: {e}")
+
+    if not isinstance(raw_cuts, list) or len(raw_cuts) == 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="At least one cut interval must be provided.")
+
+    temp_id = uuid.uuid4().hex[:10]
+    raw_path = settings.UPLOAD_DIR / f"raw_compile_{temp_id}_{Path(uploaded.filename).name}"
+    out_name = f"sequence_{temp_id}_{len(raw_cuts)}cuts.mp4"
+    out_path = settings.TRIMMED_DIR / out_name
+
+    _save_upload_file(uploaded, raw_path)
+    try:
+        norm_cuts = []
+        for c in raw_cuts:
+            s = float(c.get("start", c.get("start_sec", 0.0)))
+            e = float(c.get("end", c.get("end_sec", 0.0)))
+            if e > s:
+                norm_cuts.append({"start_sec": s, "end_sec": e})
+
+        if not norm_cuts:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No valid cuts where end > start.")
+
+        SpatialPerceptionEngine.compile_video_cuts(
+            input_path=raw_path,
+            output_path=out_path,
+            cuts=norm_cuts,
+            draw_bbox=draw_bbox,
+        )
+        return FileResponse(path=str(out_path), media_type="video/mp4", filename="violations_sequence.mp4")
+    finally:
+        if raw_path.exists():
+            try:
+                raw_path.unlink()
+            except OSError:
+                pass
+
+
 def _get_job_and_video_path(job_id: str):
     job = repository.get_job(job_id)
     if not job or not job.get("file_path"):

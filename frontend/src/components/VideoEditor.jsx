@@ -4,6 +4,7 @@ import {
   FileVideo,
   Sparkles,
   Loader2,
+  Trash2,
 } from 'lucide-react'
 import Timeline from './Timeline'
 
@@ -20,6 +21,11 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
   const [detections, setDetections] = useState([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisStatus, setAnalysisStatus] = useState('idle') // 'idle' | 'analyzing' | 'done'
+
+  // Selected violation intervals for export (CapCut / Premiere style tracks)
+  const [selectedIntervals, setSelectedIntervals] = useState([])
+  const [isExportingFrame, setIsExportingFrame] = useState(false)
+  const [isExportingSequence, setIsExportingSequence] = useState(false)
 
   // Listen to video events
   const handleLoadedMetadata = () => {
@@ -110,6 +116,164 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
     setPlaybackRate(rate)
     if (videoRef.current) {
       videoRef.current.playbackRate = rate
+    }
+  }
+
+  // Toggle selection for a violation detection marker
+  const handleToggleDetectionSelection = (det) => {
+    setSelectedIntervals((prev) => {
+      const exists = prev.some((inv) => inv.detectionId === det.id)
+      if (exists) {
+        // Deselect and remove interval from export
+        return prev.filter((inv) => inv.detectionId !== det.id)
+      } else {
+        // Select and create new interval ±3 seconds
+        const halfSpan = 3.0
+        const dur = duration || 30
+        const s = Math.max(0, parseFloat((det.timecode - halfSpan).toFixed(2)))
+        const e = Math.min(dur, parseFloat((det.timecode + halfSpan).toFixed(2)))
+        const newInterval = {
+          id: `inv_${det.id}_${Date.now()}`,
+          detectionId: det.id,
+          label: det.label,
+          timecode: det.timecode,
+          start: s,
+          end: e,
+        }
+        return [...prev, newInterval]
+      }
+    })
+  }
+
+  // Update start and end time of an interval (drag adjustment)
+  const handleUpdateInterval = (id, newStart, newEnd) => {
+    setSelectedIntervals((prev) =>
+      prev.map((inv) => (inv.id === id ? { ...inv, start: newStart, end: newEnd } : inv))
+    )
+  }
+
+  // Remove interval directly
+  const handleRemoveInterval = (id) => {
+    setSelectedIntervals((prev) => prev.filter((inv) => inv.id !== id))
+  }
+
+  // Export frame(s) as PNG
+  const handleExportFrame = async () => {
+    if (isExportingFrame) return
+    setIsExportingFrame(true)
+    try {
+      const targets =
+        selectedIntervals.length > 0
+          ? selectedIntervals.map((inv) => ({
+              timecode: inv.timecode !== undefined ? inv.timecode : (inv.start + inv.end) / 2,
+              label: inv.label || 'violation',
+            }))
+          : [{ timecode: currentTime, label: 'frame' }]
+
+      const offVideo = document.createElement('video')
+      offVideo.crossOrigin = 'anonymous'
+      offVideo.muted = true
+      offVideo.src = videoData?.url
+
+      await new Promise((resolve, reject) => {
+        offVideo.onloadedmetadata = () => resolve()
+        offVideo.onerror = (e) => reject(e)
+        setTimeout(resolve, 3000)
+      })
+
+      const canvas = document.createElement('canvas')
+      canvas.width = offVideo.videoWidth || videoResolution?.width || 1280
+      canvas.height = offVideo.videoHeight || videoResolution?.height || 720
+      const ctx = canvas.getContext('2d')
+
+      for (let i = 0; i < targets.length; i++) {
+        const target = targets[i]
+        offVideo.currentTime = Math.max(0, Math.min(duration || 30, target.timecode))
+        await new Promise((resolve) => {
+          const onSeeked = () => {
+            offVideo.removeEventListener('seeked', onSeeked)
+            resolve()
+          }
+          offVideo.addEventListener('seeked', onSeeked)
+          setTimeout(resolve, 500)
+        })
+
+        ctx.drawImage(offVideo, 0, 0, canvas.width, canvas.height)
+        const dataUrl = canvas.toDataURL('image/png')
+        const a = document.createElement('a')
+        const baseName = videoData?.name ? videoData.name.replace(/\.[^/.]+$/, '') : 'frame'
+        const tcFormatted = target.timecode.toFixed(2).replace('.', '_')
+        a.download = `${baseName}_frame_${tcFormatted}s.png`
+        a.href = dataUrl
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+
+        if (targets.length > 1) {
+          await new Promise((r) => setTimeout(r, 250))
+        }
+      }
+    } catch (err) {
+      console.error('Frame export failed:', err)
+      alert(`Не удалось экспортировать кадр: ${err.message || err}`)
+    } finally {
+      setIsExportingFrame(false)
+    }
+  }
+
+  // Export sequence: compiles selected intervals and merges into 1 video
+  const handleExportSequence = async () => {
+    if (isExportingSequence) return
+    setIsExportingSequence(true)
+    try {
+      const cuts =
+        selectedIntervals.length > 0
+          ? selectedIntervals.map((inv) => ({
+              start: inv.start,
+              end: inv.end,
+            }))
+          : [{ start: trimRange[0], end: trimRange[1] }]
+
+      const formData = new FormData()
+      if (videoData?.file) {
+        formData.append('file', videoData.file)
+      } else if (videoData?.url) {
+        const resBlob = await fetch(videoData.url).then((r) => r.blob())
+        formData.append('file', resBlob, videoData.name || 'video.mp4')
+      } else {
+        throw new Error('Видеофайл недоступен')
+      }
+      formData.append('cuts', JSON.stringify(cuts))
+      formData.append('draw_bbox', 'true')
+
+      const response = await fetch('http://localhost:8000/api/v1/videos/compile-cuts', {
+        method: 'POST',
+        headers: {
+          'X-API-Key': 'forte_test_secret_key_2026',
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errText = await response.text()
+        throw new Error(`Ошибка сервера (${response.status}): ${errText}`)
+      }
+
+      const blob = await response.blob()
+      const downloadUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const baseName = videoData?.name ? videoData.name.replace(/\.[^/.]+$/, '') : 'video'
+      a.download = `${baseName}_violations_sequence_${cuts.length}cuts.mp4`
+      a.href = downloadUrl
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(downloadUrl)
+    } catch (err) {
+      console.error('Sequence export failed:', err)
+      alert(`Не удалось экспортировать нарезку: ${err.message || err}`)
+    } finally {
+      setIsExportingSequence(false)
     }
   }
 
@@ -271,6 +435,14 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
             playbackRate={playbackRate}
             onChangePlaybackRate={handleChangePlaybackRate}
             darkMode={darkMode}
+            selectedIntervals={selectedIntervals}
+            onToggleDetectionSelection={handleToggleDetectionSelection}
+            onUpdateInterval={handleUpdateInterval}
+            onRemoveInterval={handleRemoveInterval}
+            onExportFrame={handleExportFrame}
+            onExportSequence={handleExportSequence}
+            isExportingFrame={isExportingFrame}
+            isExportingSequence={isExportingSequence}
           />
         </div>
       </div>
@@ -315,6 +487,17 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
             </div>
 
             <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-gray-400 dark:text-zinc-500">Выбрано зон</span>
+              <span className="text-gray-800 dark:text-gray-200">
+                {selectedIntervals.length > 0 ? (
+                  <span className="text-sky-500 dark:text-sky-400 font-semibold">{selectedIntervals.length} шт.</span>
+                ) : (
+                  '—'
+                )}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-xs font-mono">
               <span className="text-gray-400 dark:text-zinc-500">Разрешение</span>
               <span className="text-gray-800 dark:text-gray-200">
                 {videoResolution ? `${videoResolution.width} × ${videoResolution.height}` : '—'}
@@ -333,6 +516,40 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
               </span>
             </div>
           </div>
+
+          {/* Selected Export Intervals in Side Panel if any */}
+          {selectedIntervals.length > 0 && (
+            <div className="px-5 py-3 border-b border-gray-200/30 dark:border-[#1A1E26] space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-mono text-gray-500 dark:text-zinc-400 uppercase tracking-wider">
+                <span>Зоны для нарезки:</span>
+                <span className="text-sky-500 font-semibold">{selectedIntervals.length}</span>
+              </div>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                {selectedIntervals.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="flex items-center justify-between p-2 rounded bg-gray-50 dark:bg-[#14171E] border border-gray-200/40 dark:border-[#1F242E] text-xs font-mono"
+                  >
+                    <div className="truncate max-w-[190px]">
+                      <div className="text-sky-600 dark:text-sky-400 font-semibold text-[11px]">
+                        {inv.start.toFixed(1)}с — {inv.end.toFixed(1)}с
+                      </div>
+                      <div className="text-[10px] text-gray-500 dark:text-zinc-400 truncate">
+                        {inv.label}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveInterval(inv.id)}
+                      className="p-1 text-gray-400 hover:text-red-500 transition"
+                      title="Удалить из экспорта"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Seamless State Content (No dashed box) */}
           {analysisStatus === 'idle' && (
@@ -368,21 +585,29 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
               </div>
 
               <div className="space-y-2">
-                {detections.map((d) => (
-                  <div
-                    key={d.id}
-                    onClick={() => handleSeek(d.timecode)}
-                    className="p-2.5 rounded hover:bg-gray-100/60 dark:hover:bg-[#161920] cursor-pointer transition-colors border-l-2 border-sky-400 pl-3 space-y-0.5 group"
-                  >
-                    <div className="flex items-center justify-between text-[10px] font-mono text-sky-500">
-                      <span>{d.timecode.toFixed(1)} с</span>
-                      <span className="text-gray-400 dark:text-zinc-500">{d.lawRef}</span>
+                {detections.map((d) => {
+                  const isSelected = selectedIntervals.some((i) => i.detectionId === d.id)
+                  return (
+                    <div
+                      key={d.id}
+                      onClick={() => handleSeek(d.timecode)}
+                      className={`p-2.5 rounded hover:bg-gray-100/60 dark:hover:bg-[#161920] cursor-pointer transition-colors border-l-2 pl-3 space-y-0.5 group ${
+                        isSelected ? 'border-sky-400 bg-sky-50/20 dark:bg-sky-950/10' : 'border-gray-300 dark:border-zinc-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-[10px] font-mono text-sky-500">
+                        <span>{d.timecode.toFixed(1)} с</span>
+                        <span className="text-gray-400 dark:text-zinc-500">{d.lawRef}</span>
+                      </div>
+                      <div className="text-xs text-gray-800 dark:text-gray-200 font-medium group-hover:text-sky-400 transition-colors">
+                        {d.label}
+                      </div>
+                      <div className="text-[10px] text-gray-400 dark:text-zinc-500">
+                        {isSelected ? '✓ Выбрано для экспорта' : 'Нажмите маркер на шкале для выбора'}
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-800 dark:text-gray-200 font-medium group-hover:text-sky-400 transition-colors">
-                      {d.label}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
