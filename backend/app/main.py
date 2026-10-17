@@ -60,11 +60,14 @@ app.add_middleware(
 
 app.include_router(v1_router)
 
-# Mount test_front/dist static files if built so http://localhost:8000 serves the Prism Web UI
+# Mount frontend/dist (or fallback to test_front/dist) static files if built
+frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 test_front_dist = Path(__file__).resolve().parent.parent.parent / "test_front" / "dist"
-if test_front_dist.exists():
+static_dist = frontend_dist if frontend_dist.exists() else (test_front_dist if test_front_dist.exists() else None)
+
+if static_dist is not None:
     from fastapi.staticfiles import StaticFiles
-    app.mount("/", StaticFiles(directory=str(test_front_dist), html=True), name="test_front")
+    app.mount("/", StaticFiles(directory=str(static_dist), html=True), name="frontend_static")
 else:
     @app.get("/", tags=["Root"])
     async def root():
