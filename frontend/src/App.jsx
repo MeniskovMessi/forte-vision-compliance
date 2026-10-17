@@ -3,6 +3,7 @@ import Header from './components/Header'
 import Screensaver from './components/Screensaver'
 import UploadDropzone from './components/UploadDropzone'
 import VideoEditor from './components/VideoEditor'
+import RegulationsModal from './components/RegulationsModal'
 
 export default function App() {
   // Theme state: read from localStorage, default to 'light'
@@ -23,6 +24,9 @@ export default function App() {
 
   // Uploaded video state
   const [uploadedVideo, setUploadedVideo] = useState(null)
+
+  // RK Normatives modal state
+  const [showRegulationsModal, setShowRegulationsModal] = useState(false)
 
   // Persist theme to localStorage and sync 'dark' class on html
   useEffect(() => {
@@ -81,6 +85,7 @@ export default function App() {
           darkMode={darkMode}
           onToggleTheme={toggleTheme}
           onReplayIntro={handleReplayIntro}
+          onOpenRegulations={() => setShowRegulationsModal(true)}
         />
 
         {/* View Switcher: Upload Dropzone vs Unscrollable Editor UI */}
@@ -106,6 +111,12 @@ export default function App() {
           />
         )}
       </div>
+
+      {/* RK Normatives Modal (Strict Line Design) */}
+      <RegulationsModal
+        isOpen={showRegulationsModal}
+        onClose={() => setShowRegulationsModal(false)}
+      />
     </div>
   )
 }
