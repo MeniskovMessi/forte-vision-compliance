@@ -471,12 +471,25 @@ class SpatialPerceptionEngine:
                     if not ret or frame is None:
                         break
                     cur_t = f_i / fps
-                    if draw_bbox and bbox_norm and len(bbox_norm) == 4:
-                        if peak_sec is None or abs(cur_t - float(peak_sec)) <= 1.5:
-                            x1 = max(0, min(width - 1, int(round(bbox_norm[0] * width))))
-                            y1 = max(0, min(height - 1, int(round(bbox_norm[1] * height))))
-                            x2 = max(0, min(width - 1, int(round(bbox_norm[2] * width))))
-                            y2 = max(0, min(height - 1, int(round(bbox_norm[3] * height))))
+                    if draw_bbox:
+                        active_box = None
+                        events = cut.get("events")
+                        if events and isinstance(events, list):
+                            for ev in events:
+                                ev_peak = ev.get("peak_sec")
+                                ev_box = ev.get("bbox_norm")
+                                if ev_box and len(ev_box) == 4 and (ev_peak is None or abs(cur_t - float(ev_peak)) <= 2.5):
+                                    active_box = ev_box
+                                    break
+                        elif bbox_norm and len(bbox_norm) == 4:
+                            if (e_sec - s_sec) <= 12.0 or peak_sec is None or abs(cur_t - float(peak_sec)) <= 3.0:
+                                active_box = bbox_norm
+
+                        if active_box and len(active_box) == 4:
+                            x1 = max(0, min(width - 1, int(round(active_box[0] * width))))
+                            y1 = max(0, min(height - 1, int(round(active_box[1] * height))))
+                            x2 = max(0, min(width - 1, int(round(active_box[2] * width))))
+                            y2 = max(0, min(height - 1, int(round(active_box[3] * height))))
                             cv2.rectangle(frame, (x1, y1), (x2, y2), (72, 29, 225), 2)
                             c_len = max(8, min(24, int((x2 - x1) * 0.15)))
                             cv2.line(frame, (x1, y1), (x1 + c_len, y1), (255, 255, 255), 2)

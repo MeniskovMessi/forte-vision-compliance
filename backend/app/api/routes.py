@@ -458,6 +458,7 @@ async def compile_direct_video_cuts_endpoint(
                     "end_sec": e,
                     "peak_sec": c.get("peak_sec"),
                     "bbox_norm": c.get("bbox_norm") or [0.28, 0.43, 0.52, 0.51],
+                    "events": c.get("events"),
                 })
 
         if not norm_cuts:

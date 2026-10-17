@@ -98,6 +98,8 @@ class CompliancePipelineOrchestrator:
                 )
                 grounded["relative_timecode_sec"] = int(round(rel_tc))
                 grounded["evidence_bbox"] = ev_bbox
+                grounded["bbox_norm"] = ev_bbox.get("bbox_norm")
+                grounded["bbox_label"] = ev_bbox.get("label")
                 grounded["replay_window"] = {
                     "pre_roll_sec": round(max(0.0, rel_tc - 5.0), 1),
                     "stop_sec": round(rel_tc, 1),
