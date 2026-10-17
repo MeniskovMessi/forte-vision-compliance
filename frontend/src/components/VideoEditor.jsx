@@ -629,9 +629,9 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
               ) : (
                 <div className="flex flex-col">
                   {/* Full-width header banner */}
-                  <div className="px-5 py-3 flex items-center justify-between text-[11px] font-mono text-gray-500 dark:text-zinc-400 uppercase tracking-wider border-b border-gray-200/30 dark:border-[#1A1E26] bg-gray-50/30 dark:bg-[#0E1116]/40">
+                  <div className="px-5 py-2.5 flex items-center justify-between text-[11px] font-mono text-gray-500 dark:text-zinc-400 uppercase tracking-wider border-b border-gray-200/30 dark:border-[#1A1E26] bg-gray-50/30 dark:bg-[#0E1116]/40">
                     <span>Обнаружено нарушений:</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-sky-500/10 text-sky-500 dark:text-sky-400 border border-sky-500/20 font-semibold">
+                    <span className="text-sky-500 dark:text-sky-400 font-semibold">
                       {detections.length}
                     </span>
                   </div>
