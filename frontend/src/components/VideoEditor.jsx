@@ -611,59 +611,71 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
           )}
 
           {analysisStatus === 'done' && (
-            <div className="px-5 py-4 space-y-3">
+            <div>
               {detections.length === 0 ? (
-                <div className="p-3 rounded-lg border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 flex items-start space-x-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                  <div>
-                    <div className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
-                      Нарушений не обнаружено
-                    </div>
-                    <div className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5 font-sans">
-                      Видео полностью соответствует правилам кассовой дисциплины НБРК.
+                <div className="px-5 py-4">
+                  <div className="p-3 rounded-lg border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 flex items-start space-x-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
+                        Нарушений не обнаружено
+                      </div>
+                      <div className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5 font-sans">
+                        Видео полностью соответствует правилам кассовой дисциплины НБРК.
+                      </div>
                     </div>
                   </div>
                 </div>
               ) : (
-                <>
-                  <div className="flex items-center justify-between text-[11px] font-mono text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
+                <div className="flex flex-col">
+                  {/* Full-width header banner */}
+                  <div className="px-5 py-3 flex items-center justify-between text-[11px] font-mono text-gray-500 dark:text-zinc-400 uppercase tracking-wider border-b border-gray-200/30 dark:border-[#1A1E26] bg-gray-50/30 dark:bg-[#0E1116]/40">
                     <span>Обнаружено нарушений:</span>
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-sky-500/10 text-sky-500 dark:text-sky-400 border border-sky-500/20 font-semibold">
                       {detections.length}
                     </span>
                   </div>
 
-                  <div className="space-y-2">
+                  {/* Full-width violation rows (no card boxes, edge-to-edge flush layout) */}
+                  <div className="divide-y divide-gray-200/30 dark:divide-[#1A1E26] border-b border-gray-200/30 dark:border-[#1A1E26]">
                     {detections.map((d) => {
                       const isSelected = selectedIntervals.some((i) => i.detectionId === d.id)
                       return (
                         <div
                           key={d.id}
                           onClick={() => handleSeek(d.timecode)}
-                          className={`p-2.5 rounded hover:bg-gray-100/60 dark:hover:bg-[#161920] cursor-pointer transition-colors border-l-2 pl-3 space-y-0.5 group ${
-                            isSelected ? 'border-sky-400 bg-sky-50/20 dark:bg-sky-950/10' : 'border-gray-300 dark:border-zinc-700'
+                          className={`w-full px-5 py-3.5 cursor-pointer transition-colors relative border-l-2 group ${
+                            isSelected
+                              ? 'border-sky-400 bg-sky-500/5 dark:bg-sky-400/5'
+                              : 'border-transparent hover:border-gray-400 dark:hover:border-zinc-600 hover:bg-gray-50/60 dark:hover:bg-[#14171E]'
                           }`}
                         >
-                          <div className="flex items-center justify-between text-[10px] font-mono text-sky-500">
-                            <span>{d.timecode.toFixed(1)} с</span>
-                            <span className="text-gray-400 dark:text-zinc-500">{d.lawRef}</span>
+                          <div className="flex items-center justify-between text-[11px] font-mono">
+                            <span className="text-sky-500 dark:text-sky-400 font-semibold">{d.timecode.toFixed(1)} с</span>
+                            <span className="text-gray-400 dark:text-zinc-500 text-[10px] truncate max-w-[170px]" title={d.lawRef}>
+                              {d.lawRef}
+                            </span>
                           </div>
-                          <div className="text-xs text-gray-800 dark:text-gray-200 font-medium group-hover:text-sky-400 transition-colors">
+
+                          <div className="text-xs text-gray-800 dark:text-gray-200 font-medium group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors mt-1 leading-snug">
                             {d.label}
                           </div>
-                          {d.confidence && (
-                            <div className="text-[9px] font-mono text-gray-400 dark:text-zinc-500">
-                              Уверенность: {Math.round(d.confidence * 100)}%
-                            </div>
-                          )}
-                          <div className="text-[10px] text-gray-400 dark:text-zinc-500">
-                            {isSelected ? '✓ Выбрано для экспорта' : 'Нажмите маркер на шкале для выбора'}
+
+                          <div className="flex items-center justify-between mt-1.5 text-[10px] font-mono text-gray-400 dark:text-zinc-500">
+                            {d.confidence ? (
+                              <span>Уверенность: {Math.round(d.confidence * 100)}%</span>
+                            ) : (
+                              <span />
+                            )}
+                            <span className={isSelected ? 'text-sky-500 dark:text-sky-400 font-medium' : ''}>
+                              {isSelected ? '✓ Выбрано для экспорта' : 'Нажмите маркер на шкале для выбора'}
+                            </span>
                           </div>
                         </div>
                       )
                     })}
                   </div>
-                </>
+                </div>
               )}
             </div>
           )}
