@@ -248,11 +248,19 @@ async def get_job_status_endpoint(
     # Format strict Jury API violations array
     jury_violations = []
     for v in job.get("violations", []):
+        clean_ev = [
+            {
+                "timestamp_sec": ef.get("timestamp_sec", 0.0),
+                "image_base64": ef.get("image_base64", ""),
+            }
+            for ef in v.get("evidence_frames", [])
+            if isinstance(ef, dict)
+        ]
         jury_violations.append({
             "type": v.get("type", ""),
             "timecode_sec": v.get("timecode_sec", 0),
             "description": v.get("description", ""),
-            "evidence_frames": v.get("evidence_frames", []),
+            "evidence_frames": clean_ev,
         })
 
     return {

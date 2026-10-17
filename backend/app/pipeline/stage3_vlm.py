@@ -34,16 +34,95 @@ class LocalVLMVerifier:
         self.enable_ollama = os.getenv("ENABLE_LOCAL_VLM", "false").lower() in ("true", "1", "yes")
 
     @staticmethod
+    def compute_evidence_bbox(
+        rule_code: str,
+        timeline: List[Dict[str, Any]],
+        peak_sec: float,
+        meta: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Computes a normalized bounding box `[x1, y1, x2, y2]` (in [0.0..1.0] video coordinates)
+        and a short Russian label pinpointing the spatial region of the violation at `peak_sec`.
+        Used by the Web UI video player to draw an interactive rectangle overlay when playback
+        pauses at the violation timestamp (`T` after playing from `T - 5s`).
+        """
+        zones = meta.get("zones", {})
+        layout = zones.get("layout", "A_right_laptop")
+
+        # Find the closest spatial frame state S(t) to peak_sec
+        frame_state = None
+        if timeline:
+            frame_state = min(timeline, key=lambda s: abs(float(s.get("timestamp_sec", 0.0)) - peak_sec))
+
+        persons = (frame_state or {}).get("persons", [])
+        objects = (frame_state or {}).get("objects", [])
+
+        # 1. Laptop left unlocked / open
+        if rule_code == "UNATTENDED_LAPTOP_OPEN":
+            for obj in objects:
+                if obj.get("class_name") in ("laptop", "tv"):
+                    return {"bbox_norm": obj["bbox"], "label": "Незаблокированный ноутбук (АРМ)"}
+            box = zones.get("laptop", [0.46, 0.35, 0.72, 0.56] if "A" in layout else [0.16, 0.35, 0.44, 0.56])
+            return {"bbox_norm": [round(float(v), 3) for v in box], "label": "Незаблокированный ноутбук (АРМ)"}
+
+        # 2. Safe door left open
+        if rule_code in ("UNATTENDED_SAFE_OPEN", "OPEN_SAFE_DURING_OPERATIONS"):
+            box = zones.get("safe", [0.56, 0.46, 0.95, 0.92])
+            return {"bbox_norm": [round(float(v), 3) for v in box], "label": "Открытая дверца сейфа"}
+
+        # 3. Inkassator bag left unattended or improper handover
+        if rule_code in ("UNATTENDED_CASH_BAG", "INKASSATOR_HANDOVER_VIOLATION"):
+            for obj in objects:
+                if obj.get("class_name") in ("handbag", "suitcase", "backpack"):
+                    return {"bbox_norm": obj["bbox"], "label": "Инкассаторская сумка / баул"}
+            return {"bbox_norm": [0.30, 0.44, 0.76, 0.90], "label": "Зона передачи инкассаторской сумки"}
+
+        # 4. Foreign objects / cups / personal items on desk
+        if rule_code in ("FOREIGN_OBJECTS_PERSONAL_ITEMS", "PERSONAL_ITEMS_WORKSPACE"):
+            for obj in objects:
+                if obj.get("class_name") in ("cup", "bottle", "wine glass", "bowl", "handbag", "backpack", "suitcase"):
+                    return {"bbox_norm": obj["bbox"], "label": f"Посторонний предмет ({obj.get('class_name')})"}
+            box = zones.get("desk_surface", [0.22, 0.33, 0.68, 0.58])
+            return {"bbox_norm": [round(float(v), 3) for v in box], "label": "Посторонний предмет в рабочей зоне кассы"}
+
+        # 5. Unauthorized 3rd party present in cash room
+        if rule_code == "UNAUTHORIZED_THIRD_PARTY_PRESENT":
+            if len(persons) >= 3:
+                p_sorted = sorted(persons, key=lambda p: p["bbox"][1])
+                return {"bbox_norm": p_sorted[0]["bbox"], "label": "Постороннее (третье) лицо в кассе"}
+            return {"bbox_norm": [0.12, 0.10, 0.64, 0.82], "label": "Постороннее (третье) лицо в кассе"}
+
+        # 6. Door left unlocked on entry
+        if rule_code == "DOOR_LEFT_UNLOCKED_ON_ENTRY":
+            box = zones.get("door", [0.40, 0.08, 0.76, 0.58])
+            return {"bbox_norm": [round(float(v), 3) for v in box], "label": "Входная дверь кассы (не заперта)"}
+
+        # 7. Unattended cash or cash handover / recount violations on desk surface
+        box = zones.get("desk_surface", [0.20, 0.32, 0.68, 0.58])
+        label_map = {
+            "UNATTENDED_CASH_ON_DESK": "Наличные деньги без присмотра на столе",
+            "CASH_LEFT_AFTER_CLIENT_EXIT": "Неубранная наличность после ухода клиента",
+            "CONCURRENT_CLIENTS_UNCLEARED_DESK": "Обслуживание нового клиента при неубранной наличности",
+            "CASH_HANDOVER_WITHOUT_RECOUNT": "Передача наличных без пересчета на счетной машинке",
+            "MANUAL_COUNT_WITHOUT_DETECTOR": "Ручной пересчет без УФ-детектора и счетчика",
+        }
+        return {
+            "bbox_norm": [round(float(v), 3) for v in box],
+            "label": label_map.get(rule_code, "Зона фиксации нарушения кассовой дисциплины"),
+        }
+
+    @staticmethod
     def select_evidence_frames(
         sampled_frames: Dict[float, np.ndarray],
         peak_sec: float,
         trim_offset_sec: float = 0.0,
         max_frames: int = 3,
+        evidence_bbox: Dict[str, Any] = None,
     ) -> List[Dict[str, Any]]:
         """
         Extracts up to `max_frames` (1-3) base64-encoded JPEG frames centered on `peak_sec`
         (e.g. peak_sec - 1s, peak_sec, peak_sec + 1s), returning objects:
-        `[{"timestamp_sec": 18.0, "image_base64": "/9j/4AAQ..."}]`.
+        `[{"timestamp_sec": 18.0, "image_base64": "/9j/4AAQ...", "bbox_norm": [...]}]`.
         """
         if not sampled_frames:
             return []
@@ -66,10 +145,14 @@ class LocalVLMVerifier:
         for t in chosen_ts[:max_frames]:
             b64 = SpatialPerceptionEngine.encode_frame_base64(sampled_frames[t], quality=85)
             if b64:
-                ev_list.append({
+                item: Dict[str, Any] = {
                     "timestamp_sec": round(float(trim_offset_sec + t), 1),
                     "image_base64": b64,
-                })
+                }
+                if evidence_bbox:
+                    item["bbox_norm"] = evidence_bbox.get("bbox_norm")
+                    item["bbox_label"] = evidence_bbox.get("label")
+                ev_list.append(item)
         return ev_list
 
     def verify_and_describe(

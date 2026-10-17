@@ -55,7 +55,30 @@ Because real-world bank CCTV systems often export multi-hour recordings while an
 
 ---
 
-## 3. FastAPI REST API Endpoints (`backend/app/api/routes.py`)
+## 3. Interactive Violation Pre-Roll Replay (`T - 5s → T`) & Evidence Bounding-Box Overlay
+
+To give bank auditors immediate visual context when reviewing detected violations on the Web UI, we implemented backend and frontend support for **Smart Pre-Roll Replay with Evidence Rectangle Highlighting**:
+
+1. **Violation Card Selection & Legal Explanation:**
+   - After video analysis completes, all detected violations are displayed as interactive cards showing the violation type, timestamp (`MM:SS` / `timecode_sec`), factual visual explanation, and grounded Republic of Kazakhstan regulation (`doc_title`, `clause_ref`, normative quote, and clickable `adilet.zan.kz` link).
+2. **Automatic 5-Second Pre-Roll Playback & Auto-Pause at Violation Point (`replay_window`):**
+   - When the user clicks a violation card:
+     - The video player automatically seeks to **`max(0, timecode_sec - 5.0)` seconds** (`replay_window.pre_roll_sec`, i.e., `T - 5s`) and starts playing (`video.play()`).
+     - The auditor watches the 5-second lead-up to the incident.
+     - Once playback reaches the exact violation timestamp **`timecode_sec` (`T`, `replay_window.stop_sec`)**, the video player **automatically pauses/stops** (`video.pause()`) on the exact violation frame.
+3. **Evidence Rectangle / Bounding-Box Overlay (`evidence_bbox`):**
+   - When the video stops at the violation timestamp `T` (and on extracted keyframe previews), an HTML5 overlay draws a **highlighted bounding rectangle** (`bbox_norm: [x1, y1, x2, y2]` in normalized `[0.0..1.0]` coordinates) with a Russian evidence tag (`label`) directly on top of the video player over the offending object, person, or workspace zone:
+     - *Unattended laptop (`Х-11`, `Х-28`):* Rectangle around the open laptop (`"Незаблокированный ноутбук (АРМ)"`).
+     - *Open safe door (`Х-13`, `Х-20`, `Х-22`):* Rectangle around the safe door (`"Открытая дверца сейфа"`).
+     - *Inkassator bag (`Х-15`, `Х-17`):* Rectangle around the cash bag / handover area (`"Инкассаторская сумка / баул"`).
+     - *Foreign objects / personal items (`Х-24`, `Х-40`, `Х-46`):* Rectangle around the detected cup, mug, handbag, or coat (`"Посторонний предмет в рабочей зоне кассы"`).
+     - *Unauthorized 3rd person (`Х-18`):* Rectangle around the 3rd person's bounding box (`"Постороннее (третье) лицо в кассе"`).
+     - *Unlocked entry door (`Х-30`, `Х-32`, `Х-33`):* Rectangle around the cash room door & lock zone (`"Входная дверь кассы (не заперта)"`).
+     - *Cash handover / recount / unattended cash (`X-1`, `X-2`, `Х-4`, `Х-26`, `Х-34`, `Х-38`, `Х-44`, `Х-47`):* Rectangle around the active desk cash surface & handover zone.
+
+---
+
+## 4. FastAPI REST API Endpoints (`backend/app/api/routes.py`)
 
 ### Authentication
 All protected endpoints require the `X-API-Key` header (configured via `API_KEY` in `.env`). Missing or invalid keys return `401 Unauthorized`.
@@ -64,26 +87,26 @@ All protected endpoints require the `X-API-Key` header (configured via `API_KEY`
 | :--- | :--- | :---: | :--- |
 | `POST` | `/api/v1/analyze` | `X-API-Key` | **Jury Endpoint 1:** Upload `.mov`/`.mp4` under `file` (or `video`) + optional `start_sec`, `end_sec`, `save_trimmed_only`. Returns `202 Accepted` with `{"job_id": "...", "status": "processing"}`. |
 | `GET` | `/api/v1/jobs/{job_id}` | `X-API-Key` | **Jury Endpoint 2:** Poll job status (`processing`, `done`, `failed`) and get strict Jury JSON (`verdict`, `violations` with `type`, `timecode_sec`, `description`, `evidence_frames`). |
-| `GET` | `/api/v1/jobs/{job_id}/detailed` | `X-API-Key` | **Enriched Audit Endpoint:** Returns full job metadata (`video_metadata`, `trim_interval`, `processing_time_sec`) + structured `regulation_reference` (`doc_title`, `clause_ref`, `adilet_url`, `normative_text`, `rag_similarity`), `rule_code`, and `confidence`. |
+| `GET` | `/api/v1/jobs/{job_id}/detailed` | `X-API-Key` | **Enriched Audit Endpoint:** Returns full job metadata (`video_metadata`, `trim_interval`, `processing_time_sec`) + `replay_window` (`pre_roll_sec`, `stop_sec`), `evidence_bbox` (`bbox_norm`, `label`), and `regulation_reference` (`doc_title`, `clause_ref`, `adilet_url`, `normative_text`, `rag_similarity`). |
 | `GET` | `/api/v1/jobs` | `X-API-Key` | **Audit History & Dashboard Metrics:** Lists recent jobs from PostgreSQL `analysis_jobs` + summary counts (`total_jobs`, `violation_videos`, `compliant_videos`, `processing_jobs`). |
 | `POST` | `/api/v1/videos/inspect` | `X-API-Key` | **Video Inspector:** Returns `duration_sec`, `fps`, `width`, `height`, and 3 base64 preview thumbnails for UI timeline trimming. |
 | `POST` | `/api/v1/videos/trim` | `X-API-Key` | **Standalone Video Trimmer:** Physically trims an uploaded video to `[start_sec, end_sec]` and optionally starts an analysis job. |
-| `GET` | `/api/v1/videos/{job_id}/stream` | Public | **Video Streamer:** Streams the `.mov`/`.mp4` video file for a job so the Web UI video player can play and seek to `timecode_sec`. |
+| `GET` | `/api/v1/videos/{job_id}/stream` | Public | **Video Streamer:** Streams the `.mov`/`.mp4` video file for a job so the Web UI video player can play `T - 5s → T` and render the evidence rectangle. |
 | `GET` | `/api/v1/regulations` | Public | **Legal Knowledge Base:** Lists all 16 seeded RK banking regulations (`adilet.zan.kz`) from PostgreSQL `rk_banking_regulations`. |
 | `GET` | `/api/v1/health` | Public | **Healthcheck:** Verifies local YOLO models, embedding model, and PostgreSQL + `pgvector` database connectivity. |
 
 ---
 
-## 4. Database & Persistence Features (`backend/app/db/repository.py`)
+## 5. Database & Persistence Features (`backend/app/db/repository.py`)
 
 - **`rk_banking_regulations` (`pgvector` `vector(384)`):** Stores 16 curated National Bank of RK clauses with IVFFlat cosine similarity index.
-- **`analysis_jobs` (`JSONB`):** Persists every job's lifecycle (`processing` $\rightarrow$ `done` / `failed`), `verdict`, `processing_time_sec`, and full `result_json`.
+- **`analysis_jobs` (`JSONB`):** Persists every job's lifecycle (`processing` $\rightarrow$ `done` / `failed`), `verdict`, `processing_time_sec`, and full `result_json` (including `evidence_bbox` and `replay_window`).
 - **`detected_violations`:** Stores granular violation rows linked via foreign key to `analysis_jobs(job_id)` for SQL analytics and audit filtering.
 - **Dual-Layer Resilience:** Combines PostgreSQL persistence with an in-memory mirror so job polling is instantaneous and resilient.
 
 ---
 
-## 5. One-Command Setup & Utility Scripts (`scripts/`)
+## 6. One-Command Setup & Utility Scripts (`scripts/`)
 
 | Script | Purpose |
 | :--- | :--- |

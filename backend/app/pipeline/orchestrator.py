@@ -66,12 +66,19 @@ class CompliancePipelineOrchestrator:
             for cand in candidates:
                 rel_tc = float(cand.timecode_sec)
                 abs_tc = int(round(trim_offset + rel_tc))
+                ev_bbox = self.stage3.compute_evidence_bbox(
+                    rule_code=cand.rule_code,
+                    timeline=timeline,
+                    peak_sec=rel_tc,
+                    meta=meta,
+                )
                 ev_frames = (
                     self.stage3.select_evidence_frames(
                         sampled_frames,
                         rel_tc,
                         trim_offset_sec=trim_offset,
                         max_frames=3,
+                        evidence_bbox=ev_bbox,
                     )
                     if include_evidence_frames
                     else []
@@ -90,6 +97,13 @@ class CompliancePipelineOrchestrator:
                     evidence_frames=ev_frames,
                 )
                 grounded["relative_timecode_sec"] = int(round(rel_tc))
+                grounded["evidence_bbox"] = ev_bbox
+                grounded["replay_window"] = {
+                    "pre_roll_sec": round(max(0.0, rel_tc - 5.0), 1),
+                    "stop_sec": round(rel_tc, 1),
+                    "abs_pre_roll_sec": round(max(0.0, float(abs_tc) - 5.0), 1),
+                    "abs_stop_sec": round(float(abs_tc), 1),
+                }
                 grounded_violations.append(grounded)
 
             verdict = "violation" if len(grounded_violations) > 0 else "no_violation"
