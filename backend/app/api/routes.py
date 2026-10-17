@@ -453,7 +453,12 @@ async def compile_direct_video_cuts_endpoint(
             s = float(c.get("start", c.get("start_sec", 0.0)))
             e = float(c.get("end", c.get("end_sec", 0.0)))
             if e > s:
-                norm_cuts.append({"start_sec": s, "end_sec": e})
+                norm_cuts.append({
+                    "start_sec": s,
+                    "end_sec": e,
+                    "peak_sec": c.get("peak_sec"),
+                    "bbox_norm": c.get("bbox_norm") or [0.28, 0.43, 0.52, 0.51],
+                })
 
         if not norm_cuts:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No valid cuts where end > start.")

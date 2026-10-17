@@ -34,6 +34,10 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
   const [isExportingFrame, setIsExportingFrame] = useState(false)
   const [isExportingSequence, setIsExportingSequence] = useState(false)
 
+  // Bounding box toggle and auto-stop checkpoint ref
+  const [showBoundingBox, setShowBoundingBox] = useState(false)
+  const lastStoppedCheckpointRef = useRef(null)
+
   // Listen to video events
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
@@ -48,8 +52,23 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
   }
 
   const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime || 0)
+    if (!videoRef.current) return
+    const cur = videoRef.current.currentTime || 0
+    setCurrentTime(cur)
+
+    // When B-Box is enabled, automatically pause playback when reaching any violation checkpoint
+    if (showBoundingBox && isPlaying && detections.length > 0) {
+      for (const det of detections) {
+        const diff = Math.abs(cur - det.timecode)
+        if (diff <= 0.25 && lastStoppedCheckpointRef.current !== det.id) {
+          lastStoppedCheckpointRef.current = det.id
+          videoRef.current.pause()
+          videoRef.current.currentTime = det.timecode
+          setCurrentTime(det.timecode)
+          setIsPlaying(false)
+          break
+        }
+      }
     }
   }
 
@@ -59,6 +78,7 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
       videoRef.current.pause()
       setIsPlaying(false)
     } else {
+      lastStoppedCheckpointRef.current = null
       videoRef.current.play()
       setIsPlaying(true)
     }
@@ -66,6 +86,7 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
 
   // Seek handler from timeline click/scrub
   const handleSeek = (targetTime) => {
+    lastStoppedCheckpointRef.current = null
     if (!videoRef.current) return
     const clamped = Math.max(0, Math.min(duration, targetTime))
     videoRef.current.currentTime = clamped
@@ -74,16 +95,19 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
 
   // Jump to start
   const handleJumpToStart = () => {
+    lastStoppedCheckpointRef.current = null
     handleSeek(0)
   }
 
   // Jump to end
   const handleJumpToEnd = () => {
+    lastStoppedCheckpointRef.current = null
     handleSeek(duration)
   }
 
   // Move left to previous detected checkpoint (or beginning if none)
   const handlePrevCheckpoint = () => {
+    lastStoppedCheckpointRef.current = null
     if (!detections || detections.length === 0) {
       handleJumpToStart()
       return
@@ -102,12 +126,12 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
 
   // Move right to next detected checkpoint (or end if none)
   const handleNextCheckpoint = () => {
+    lastStoppedCheckpointRef.current = null
     if (!detections || detections.length === 0) {
       handleJumpToEnd()
       return
     }
     const nexts = detections
-      .map((d) => d.timecode)
       .filter((t) => t > currentTime + 0.25)
       .sort((a, b) => a - b)
 
@@ -206,11 +230,66 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
         })
 
         ctx.drawImage(offVideo, 0, 0, canvas.width, canvas.height)
+
+        // Draw Bounding Box onto exported frame if showBoundingBox is enabled
+        if (showBoundingBox) {
+          const detMatch = detections.find(
+            (d) => Math.abs(d.timecode - target.timecode) <= 1.5 && d.bboxNorm?.length === 4
+          )
+          const bbox = detMatch?.bboxNorm || target.bboxNorm || [0.28, 0.43, 0.52, 0.51]
+          if (bbox && bbox.length === 4) {
+            const bx = Math.round(bbox[0] * canvas.width)
+            const by = Math.round(bbox[1] * canvas.height)
+            const bw = Math.round((bbox[2] - bbox[0]) * canvas.width)
+            const bh = Math.round((bbox[3] - bbox[1]) * canvas.height)
+
+            ctx.save()
+            // Bounding box outline
+            ctx.strokeStyle = '#F43F5E'
+            ctx.lineWidth = Math.max(3, Math.round(canvas.width / 400))
+            ctx.strokeRect(bx, by, bw, bh)
+
+            // Semi-transparent highlight
+            ctx.fillStyle = 'rgba(244, 63, 94, 0.12)'
+            ctx.fillRect(bx, by, bw, bh)
+
+            // Corner brackets
+            const cLen = Math.max(10, Math.round(bw * 0.15))
+            ctx.strokeStyle = '#FFFFFF'
+            ctx.lineWidth = Math.max(2, Math.round(ctx.lineWidth * 0.8))
+            ctx.beginPath()
+            ctx.moveTo(bx, by + cLen); ctx.lineTo(bx, by); ctx.lineTo(bx + cLen, by)
+            ctx.moveTo(bx + bw - cLen, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + cLen)
+            ctx.moveTo(bx, by + bh - cLen); ctx.lineTo(bx, by + bh); ctx.lineTo(bx + cLen, by + bh)
+            ctx.moveTo(bx + bw - cLen, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - cLen)
+            ctx.stroke()
+
+            // Tag badge
+            const labelText = `НАРУШЕНИЕ: ${target.label || detMatch?.label || 'КАССОВАЯ ЗОНА'}`
+            const fontSize = Math.max(13, Math.round(canvas.width / 75))
+            ctx.font = `bold ${fontSize}px sans-serif`
+            const textWidth = ctx.measureText(labelText).width
+            const bannerH = fontSize + 12
+            const bannerY = Math.max(4, by - bannerH - 4)
+
+            ctx.fillStyle = 'rgba(15, 17, 23, 0.92)'
+            ctx.fillRect(bx, bannerY, textWidth + 18, bannerH)
+            ctx.strokeStyle = '#F43F5E'
+            ctx.lineWidth = 1.5
+            ctx.strokeRect(bx, bannerY, textWidth + 18, bannerH)
+
+            ctx.fillStyle = '#FFFFFF'
+            ctx.textBaseline = 'middle'
+            ctx.fillText(labelText, bx + 9, bannerY + bannerH / 2)
+            ctx.restore()
+          }
+        }
+
         const dataUrl = canvas.toDataURL('image/png')
         const a = document.createElement('a')
         const baseName = videoData?.name ? videoData.name.replace(/\.[^/.]+$/, '') : 'frame'
         const tcFormatted = target.timecode.toFixed(2).replace('.', '_')
-        a.download = `${baseName}_frame_${tcFormatted}s.png`
+        a.download = `${baseName}_frame_${tcFormatted}s${showBoundingBox ? '_bbox' : ''}.png`
         a.href = dataUrl
         document.body.appendChild(a)
         a.click()
@@ -235,11 +314,21 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
     try {
       const cuts =
         selectedIntervals.length > 0
-          ? selectedIntervals.map((inv) => ({
-              start: inv.start,
-              end: inv.end,
-            }))
-          : [{ start: trimRange[0], end: trimRange[1] }]
+          ? selectedIntervals.map((inv) => {
+              const matchingDet = detections.find((d) => d.id === inv.detectionId)
+              return {
+                start: inv.start,
+                end: inv.end,
+                peak_sec: inv.timecode || (inv.start + inv.end) / 2,
+                bbox_norm: inv.bboxNorm || matchingDet?.bboxNorm || [0.28, 0.43, 0.52, 0.51],
+              }
+            })
+          : [{
+              start: trimRange[0],
+              end: trimRange[1],
+              peak_sec: currentTime,
+              bbox_norm: [0.28, 0.43, 0.52, 0.51],
+            }]
 
       let fileToCompile = videoData?.file
       if (!fileToCompile && videoData?.url) {
@@ -251,11 +340,11 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
         throw new Error('Видеофайл недоступен')
       }
 
-      const blob = await compileVideoCuts(fileToCompile, cuts, true)
+      const blob = await compileVideoCuts(fileToCompile, cuts, showBoundingBox)
       const downloadUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
       const baseName = videoData?.name ? videoData.name.replace(/\.[^/.]+$/, '') : 'video'
-      a.download = `${baseName}_violations_sequence_${cuts.length}cuts.mp4`
+      a.download = `${baseName}_violations_sequence_${cuts.length}cuts${showBoundingBox ? '_bbox' : ''}.mp4`
       a.href = downloadUrl
       document.body.appendChild(a)
       a.click()
@@ -372,6 +461,32 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
     }
   }
 
+  // Active violation at current time for B-Box rendering and auto-pause
+  const currentActiveViolation = (() => {
+    const matchDet = detections.find((d) => Math.abs(currentTime - d.timecode) <= 1.5)
+    if (matchDet) {
+      return {
+        ...matchDet,
+        bboxNorm:
+          matchDet.bboxNorm && matchDet.bboxNorm.length === 4
+            ? matchDet.bboxNorm
+            : [0.28, 0.43, 0.52, 0.51],
+      }
+    }
+
+    const activeInv = selectedIntervals.find((inv) => currentTime >= inv.start && currentTime <= inv.end)
+    if (activeInv) {
+      const parentDet = detections.find((d) => d.id === activeInv.detectionId)
+      return {
+        id: activeInv.id,
+        label: activeInv.label || parentDet?.label || 'Зона нарушения',
+        bboxNorm: activeInv.bboxNorm || parentDet?.bboxNorm || [0.28, 0.43, 0.52, 0.51],
+      }
+    }
+
+    return null
+  })()
+
   return (
     <div className="flex-1 min-h-0 w-full h-full flex flex-col md:flex-row overflow-hidden select-none bg-white dark:bg-[#0D0F12]">
       {/* 
@@ -407,17 +522,45 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
           onClick={handlePlayPauseToggle}
           className="flex-1 min-h-0 bg-gray-100 dark:bg-[#07080B] relative flex items-center justify-center p-3 sm:p-4 overflow-hidden cursor-pointer group transition-colors"
         >
-          <video
-            ref={videoRef}
-            src={videoData?.url}
-            onLoadedMetadata={handleLoadedMetadata}
-            onTimeUpdate={handleTimeUpdate}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            onEnded={() => setIsPlaying(false)}
-            playsInline
-            className="max-h-full max-w-full object-contain rounded border border-black/5 dark:border-white/5 pointer-events-none"
-          />
+          <div className="relative max-h-full max-w-full flex items-center justify-center">
+            <video
+              ref={videoRef}
+              src={videoData?.url}
+              onLoadedMetadata={handleLoadedMetadata}
+              onTimeUpdate={handleTimeUpdate}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={() => setIsPlaying(false)}
+              playsInline
+              className="max-h-full max-w-full object-contain rounded border border-black/5 dark:border-white/5 pointer-events-none"
+            />
+
+            {/* Bounding Box Overlay on Video */}
+            {showBoundingBox && currentActiveViolation && currentActiveViolation.bboxNorm && (
+              <div
+                className="absolute pointer-events-none transition-all duration-100 z-20"
+                style={{
+                  left: `${currentActiveViolation.bboxNorm[0] * 100}%`,
+                  top: `${currentActiveViolation.bboxNorm[1] * 100}%`,
+                  width: `${(currentActiveViolation.bboxNorm[2] - currentActiveViolation.bboxNorm[0]) * 100}%`,
+                  height: `${(currentActiveViolation.bboxNorm[3] - currentActiveViolation.bboxNorm[1]) * 100}%`,
+                }}
+              >
+                {/* Outlined box with hairline corners */}
+                <div className="absolute inset-0 border-2 border-rose-500 bg-rose-500/10 rounded-sm" />
+                <div className="absolute -top-1 -left-1 w-2.5 h-2.5 border-t-2 border-l-2 border-rose-400" />
+                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 border-t-2 border-r-2 border-rose-400" />
+                <div className="absolute -bottom-1 -left-1 w-2.5 h-2.5 border-b-2 border-l-2 border-rose-400" />
+                <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 border-b-2 border-r-2 border-rose-400" />
+
+                {/* Badge Tag */}
+                <div className="absolute -top-6 left-0 px-2 py-0.5 rounded bg-zinc-950/95 border border-rose-500/50 text-rose-300 font-mono text-[10px] tracking-wide whitespace-nowrap shadow-lg flex items-center space-x-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  <span>{currentActiveViolation.label || 'Зона нарушения'}</span>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Quick resolution badge (theme-adaptive) */}
           {videoResolution && (
@@ -455,6 +598,8 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
             onExportSequence={handleExportSequence}
             isExportingFrame={isExportingFrame}
             isExportingSequence={isExportingSequence}
+            showBoundingBox={showBoundingBox}
+            onToggleBoundingBox={() => setShowBoundingBox((prev) => !prev)}
           />
         </div>
       </div>

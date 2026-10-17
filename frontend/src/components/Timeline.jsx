@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react'
-import { Play, Pause, SkipBack, SkipForward, Gauge, Camera, Film, Loader2 } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, Gauge, Camera, Film, Loader2, Scan } from 'lucide-react'
 
 export default function Timeline({
   duration = 0,
@@ -25,6 +25,9 @@ export default function Timeline({
   onExportSequence,
   isExportingFrame = false,
   isExportingSequence = false,
+  // Bounding box toggle
+  showBoundingBox = false,
+  onToggleBoundingBox,
 }) {
   const trackRef = useRef(null)
 
@@ -687,6 +690,26 @@ export default function Timeline({
               </span>
             )}
           </button>
+
+          {/* Bounding Box Toggle Button */}
+          {onToggleBoundingBox && (
+            <button
+              onClick={onToggleBoundingBox}
+              className={`h-7 px-2.5 rounded text-[11px] font-medium flex items-center space-x-1.5 border transition active:scale-95 ${
+                showBoundingBox
+                  ? 'bg-rose-500/15 border-rose-500/70 text-rose-600 dark:text-rose-400 font-semibold shadow-sm'
+                  : 'border-gray-200/80 dark:border-[#22272E] bg-white dark:bg-[#14171F] hover:bg-gray-100 dark:hover:bg-[#1C202A] text-gray-700 dark:text-gray-300'
+              }`}
+              title={
+                showBoundingBox
+                  ? 'Рамка (B-Box) включена: видео останавливается на нарушении, экспорт кадра/нарезки с рамкой'
+                  : 'Включить рамку (B-Box) для авто-остановки и экспорта с рамкой'
+              }
+            >
+              <Scan className="w-3.5 h-3.5" />
+              <span>B-Box</span>
+            </button>
+          )}
 
           {/* Playback Speed Toggle */}
           {onChangePlaybackRate && (
