@@ -39,3 +39,18 @@ CREATE TABLE IF NOT EXISTS analysis_jobs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_analysis_jobs_status ON analysis_jobs(status);
+
+-- 3. Granular Detected Violations Table (for analytics, filtering, and UI display)
+CREATE TABLE IF NOT EXISTS detected_violations (
+    id SERIAL PRIMARY KEY,
+    job_id VARCHAR(32) NOT NULL REFERENCES analysis_jobs(job_id) ON DELETE CASCADE,
+    violation_type TEXT NOT NULL,
+    timecode_sec FLOAT NOT NULL,
+    description TEXT NOT NULL,
+    rule_code VARCHAR(64),
+    evidence_frame_base64 TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_detected_violations_job_id ON detected_violations(job_id);
+CREATE INDEX IF NOT EXISTS idx_detected_violations_rule_code ON detected_violations(rule_code);
