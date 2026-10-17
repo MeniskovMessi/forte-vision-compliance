@@ -10,11 +10,11 @@ export default function Screensaver({ onStartExit, onComplete, isReplaying, dark
       if (onStartExit) onStartExit()
     }, 1000)
 
-    // Stage 2: Fast & crisp 1.2s fadeout completes at 1000ms + 1200ms = 2200ms
+    // Stage 2: Crisp 0.95s fadeout completes at 1000ms + 950ms = 1950ms
     const timer2 = setTimeout(() => {
       setStage('hidden')
       if (onComplete) onComplete()
-    }, 2200)
+    }, 1950)
 
     return () => {
       clearTimeout(timer1)
@@ -39,7 +39,7 @@ export default function Screensaver({ onStartExit, onComplete, isReplaying, dark
       */}
       <div
         style={{
-          transition: 'opacity 1.2s cubic-bezier(0.2, 0, 0, 1)',
+          transition: 'opacity 0.95s cubic-bezier(0.2, 0, 0, 1)',
           willChange: 'opacity',
           opacity: isExiting ? 0 : 1,
         }}
@@ -54,7 +54,7 @@ export default function Screensaver({ onStartExit, onComplete, isReplaying, dark
       */}
       <div
         style={{
-          transition: 'opacity 1.2s cubic-bezier(0.2, 0, 0, 1), filter 1.2s cubic-bezier(0.2, 0, 0, 1), transform 1.2s cubic-bezier(0.2, 0, 0, 1)',
+          transition: 'opacity 0.95s cubic-bezier(0.2, 0, 0, 1), filter 0.95s cubic-bezier(0.2, 0, 0, 1), transform 0.95s cubic-bezier(0.2, 0, 0, 1)',
           willChange: 'opacity, filter, transform',
           opacity: isExiting ? 0 : 1,
           filter: isExiting ? 'blur(28px)' : 'blur(0px)',

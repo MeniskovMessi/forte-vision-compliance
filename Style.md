@@ -86,14 +86,14 @@ The opening screensaver serves as an editorial brand reveal rather than an anima
    - **Light Mode:** Off-white canvas (`#F9FAFB`), deep graphite typography, Forte crimson hairline mark.
    - **Dark Mode:** Matte obsidian canvas (`#0D0F12`), soft white typography, Forte crimson hairline mark.
 3. **Dissolve Animation (Fast & Clean):**
-   - **Background Layer:** Pure `opacity 1.2s cubic-bezier(0.2, 0, 0, 1)`. No blur filter is applied to the background container, ensuring edges and corners stay 100% rectilinear with zero rounded border or inward-curving artifacts.
-   - **Typography Layer:** Soft `opacity 1.2s`, `filter: blur(28px)`, and `transform: scale(1.03)` with `cubic-bezier(0.2, 0, 0, 1)`.
-   - **Lifecycle:** 1.0s active hold $\rightarrow$ 1.2s crisp dissolve $\rightarrow$ completely unmounts from the DOM at `2.2s`.
+   - **Background Layer:** Pure `opacity 0.95s cubic-bezier(0.2, 0, 0, 1)`. No blur filter is applied to the background container, ensuring edges and corners stay 100% rectilinear with zero rounded border or inward-curving artifacts.
+   - **Typography Layer:** Soft `opacity 0.95s`, `filter: blur(28px)`, and `transform: scale(1.03)` with `cubic-bezier(0.2, 0, 0, 1)`.
+   - **Lifecycle:** 1.0s active hold $\rightarrow$ 0.95s crisp dissolve $\rightarrow$ completely unmounts from the DOM at `1.95s`.
 4. **Main Page Entrance (Optical Focus Transition):**
    - Triggers at `1.0s` (`onStartExit`), running in lockstep with the screensaver's dissolve.
    - Initial State: `opacity: 0`, `filter: blur(20px)`, `transform: scale(0.985)`.
    - Target State: `opacity: 1`, `filter: blur(0px)`, `transform: scale(1)`.
-   - Timing: `1.2s cubic-bezier(0.2, 0, 0, 1)`.
+   - Timing: `0.95s cubic-bezier(0.2, 0, 0, 1)`.
    - Optical Result: Creates a seamless cross-focus effect—the intro logo defocusses and evaporates while the application workspace sharpens into crystal clarity.
 
 ---

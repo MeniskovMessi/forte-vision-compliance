@@ -24,14 +24,14 @@
   background: rgba(107, 114, 128, 0.7);
 }
 
-/* Linear-style screensaver transition: 1s hold -> crisp 1.2s dissolve without edge rounding */
+/* Linear-style screensaver transition: 1s hold -> crisp 0.95s dissolve without edge rounding */
 .screensaver-bg {
-  transition: opacity 1.2s cubic-bezier(0.2, 0, 0, 1);
+  transition: opacity 0.95s cubic-bezier(0.2, 0, 0, 1);
   will-change: opacity;
 }
 .screensaver-content {
-  transition: opacity 1.2s cubic-bezier(0.2, 0, 0, 1),
-              filter 1.2s cubic-bezier(0.2, 0, 0, 1),
-              transform 1.2s cubic-bezier(0.2, 0, 0, 1);
+  transition: opacity 0.95s cubic-bezier(0.2, 0, 0, 1),
+              filter 0.95s cubic-bezier(0.2, 0, 0, 1),
+              transform 0.95s cubic-bezier(0.2, 0, 0, 1);
   will-change: opacity, filter, transform;
 }
