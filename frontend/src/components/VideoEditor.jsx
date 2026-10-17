@@ -225,11 +225,11 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
 
         {/* 
           Video Preview Container:
-          Dynamically fills available space above the timeline
+          Dynamically fills available space above the timeline (theme-adaptive canvas)
         */}
         <div
           onClick={handlePlayPauseToggle}
-          className="flex-1 min-h-0 bg-[#07080B] relative flex items-center justify-center p-3 sm:p-4 overflow-hidden cursor-pointer group"
+          className="flex-1 min-h-0 bg-gray-100 dark:bg-[#07080B] relative flex items-center justify-center p-3 sm:p-4 overflow-hidden cursor-pointer group transition-colors"
         >
           <video
             ref={videoRef}
@@ -240,12 +240,12 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
             onPause={() => setIsPlaying(false)}
             onEnded={() => setIsPlaying(false)}
             playsInline
-            className="max-h-full max-w-full object-contain rounded pointer-events-none"
+            className="max-h-full max-w-full object-contain rounded border border-black/5 dark:border-white/5 pointer-events-none"
           />
 
-          {/* Quick resolution badge */}
+          {/* Quick resolution badge (theme-adaptive) */}
           {videoResolution && (
-            <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded text-[10px] font-mono bg-black/60 text-gray-300 border border-white/10 pointer-events-none">
+            <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded text-[10px] font-mono bg-white/80 dark:bg-black/60 text-gray-700 dark:text-gray-300 border border-gray-200/80 dark:border-white/10 pointer-events-none">
               {videoResolution.width} × {videoResolution.height}
             </div>
           )}
