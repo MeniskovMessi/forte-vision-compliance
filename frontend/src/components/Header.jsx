@@ -3,11 +3,11 @@ import { Sun, Moon, Play } from 'lucide-react'
 
 export default function Header({ darkMode, onToggleTheme, onReplayIntro }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-200/40 dark:border-white/[0.04] bg-white/95 dark:bg-[#0D0F12]/95 backdrop-blur-sm transition-colors shrink-0">
-      <div className="w-full px-4 sm:px-6 h-14 flex items-center justify-between">
+    <header className="shrink-0 z-40 border-b border-gray-200/40 dark:border-[#1A1E26] bg-white dark:bg-[#0D0F12] transition-colors">
+      <div className="w-full px-4 sm:px-6 h-12 flex items-center justify-between">
         {/* Brand */}
         <div className="flex items-center space-x-2.5">
-          <span className="font-semibold tracking-[0.2em] text-sm sm:text-base font-sans text-gray-900 dark:text-white">
+          <span className="font-semibold tracking-[0.2em] text-sm font-sans text-gray-900 dark:text-white">
             PRISM
           </span>
           <span className="text-gray-300 dark:text-gray-700">/</span>

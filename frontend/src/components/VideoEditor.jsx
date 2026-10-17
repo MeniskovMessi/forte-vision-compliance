@@ -5,9 +5,7 @@ import {
   Sparkles,
   Loader2,
   CheckCircle2,
-  AlertTriangle,
   Film,
-  Info,
 } from 'lucide-react'
 import Timeline from './Timeline'
 import TransportControls from './TransportControls'
@@ -24,7 +22,6 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
   const [detections, setDetections] = useState([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisStatus, setAnalysisStatus] = useState('idle') // 'idle' | 'analyzing' | 'done'
-  const [analysisVerdict, setAnalysisVerdict] = useState(null)
 
   // Listen to video events
   const handleLoadedMetadata = () => {
@@ -78,7 +75,6 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
       handleJumpToStart()
       return
     }
-    // Find all checkpoints before currentTime (with slight buffer 0.2s)
     const prevs = detections
       .map((d) => d.timecode)
       .filter((t) => t < currentTime - 0.25)
@@ -97,7 +93,6 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
       handleJumpToEnd()
       return
     }
-    // Find all checkpoints after currentTime (with slight buffer 0.2s)
     const nexts = detections
       .map((d) => d.timecode)
       .filter((t) => t > currentTime + 0.25)
@@ -118,7 +113,7 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
     }
   }
 
-  // Keyboard shortcut: Space for play/pause
+  // Keyboard shortcut: Space for play/pause, Arrows for step
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
@@ -144,7 +139,6 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
     setAnalysisStatus('analyzing')
 
     try {
-      // Check if backend is available
       const formData = new FormData()
       formData.append('file', videoData.file)
 
@@ -167,18 +161,14 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
               label: v.type || v.violation_type || 'Нарушение кассовой дисциплины',
               lawRef: v.article || v.clause_ref || 'НБРК',
             }))
-            setAnalysisVerdict(data.verdict || 'violation')
           }
         }
       } catch (networkErr) {
-        // Backend offline or local simulation fallback
+        // Fallback for offline testing
       }
 
-      // If backend didn't return custom violations or during offline testing,
-      // generate realistic checkpoints based on video duration
       if (!resultDetections) {
-        // Realistic simulated processing delay
-        await new Promise((resolve) => setTimeout(resolve, 1800))
+        await new Promise((resolve) => setTimeout(resolve, 1400))
         const dur = duration || 30
         resultDetections = [
           {
@@ -194,7 +184,6 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
             lawRef: 'Глава 2, пункт 36',
           },
         ]
-        setAnalysisVerdict('violation')
       }
 
       setDetections(resultDetections)
@@ -208,15 +197,15 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
   }
 
   return (
-    <div className="w-full flex-1 min-h-0 h-full flex flex-col md:flex-row overflow-hidden select-none bg-[#F9FAFB] dark:bg-[#0D0F12]">
+    <div className="flex-1 min-h-0 w-full h-full flex flex-col md:flex-row overflow-hidden select-none bg-white dark:bg-[#0D0F12]">
       {/* 
         ========================================================================
-        LEFT COLUMN: Video Player Viewport (68%) + Timeline & Transport (32%)
+        LEFT COLUMN: Video Preview (70%) + Timeline & Transport (30%)
         ========================================================================
       */}
-      <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden border-r border-gray-200/40 dark:border-white/[0.04]">
-        {/* Top Mini-Toolbar (Seamless) */}
-        <div className="h-9 px-4 border-b border-gray-200/40 dark:border-white/[0.04] bg-white/40 dark:bg-[#0D0F12] flex items-center justify-between shrink-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden border-r border-gray-200/40 dark:border-[#1A1E26]">
+        {/* Top Mini-Toolbar (Seamless, flush) */}
+        <div className="h-9 px-4 border-b border-gray-200/30 dark:border-[#1A1E26] bg-gray-50/40 dark:bg-[#0E1116] flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2">
             <button
               onClick={onBack}
@@ -226,8 +215,8 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>К загрузке</span>
             </button>
-            <span className="text-gray-300 dark:text-zinc-700">/</span>
-            <div className="flex items-center space-x-1.5 text-xs font-medium text-gray-800 dark:text-gray-200 truncate max-w-[240px] sm:max-w-md">
+            <span className="text-gray-300 dark:text-zinc-700">|</span>
+            <div className="flex items-center space-x-1.5 text-xs font-medium text-gray-800 dark:text-gray-200 truncate max-w-[200px] sm:max-w-xs">
               <FileVideo className="w-3.5 h-3.5 text-[#9D1D53] shrink-0" />
               <span className="truncate">{videoData?.name}</span>
             </div>
@@ -246,7 +235,7 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
                 <span>Анализ...</span>
               </span>
             ) : (
-              <span className="px-2 py-0.5 rounded-full bg-gray-200/50 dark:bg-[#1A1D24] text-gray-500 dark:text-zinc-400">
+              <span className="text-gray-400 dark:text-zinc-500">
                 Ожидает анализа
               </span>
             )}
@@ -254,49 +243,47 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
         </div>
 
         {/* 
-          Video Canvas Viewport:
-          Strictly fixed to 68% height with absolute containment so video NEVER overflows or pushes the timeline!
+          Video Preview Container:
+          Strictly 70% of left column height as requested, perfectly centered
         */}
-        <div className="relative h-[68%] shrink-0 flex items-center justify-center bg-black/40 dark:bg-[#07080B] overflow-hidden">
-          <div
-            onClick={handlePlayPauseToggle}
-            className="absolute inset-0 p-3 sm:p-4 flex items-center justify-center cursor-pointer group"
-          >
-            <video
-              ref={videoRef}
-              src={videoData?.url}
-              onLoadedMetadata={handleLoadedMetadata}
-              onTimeUpdate={handleTimeUpdate}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              onEnded={() => setIsPlaying(false)}
-              playsInline
-              className="max-h-full max-w-full object-contain rounded-lg shadow-2xl pointer-events-none"
-            />
+        <div
+          onClick={handlePlayPauseToggle}
+          className="h-[70%] min-h-0 bg-[#07080B] relative flex items-center justify-center p-3 sm:p-4 overflow-hidden cursor-pointer group shrink-0"
+        >
+          <video
+            ref={videoRef}
+            src={videoData?.url}
+            onLoadedMetadata={handleLoadedMetadata}
+            onTimeUpdate={handleTimeUpdate}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+            onEnded={() => setIsPlaying(false)}
+            playsInline
+            className="max-h-full max-w-full object-contain rounded shadow-2xl pointer-events-none"
+          />
 
-            {/* Floating Play Button Overlay when paused */}
-            {!isPlaying && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 backdrop-blur-[1px]">
-                <div className="w-12 h-12 rounded-full bg-[#9D1D53]/90 text-white flex items-center justify-center shadow-2xl pl-0.5 group-hover:scale-110 transition-transform">
-                  <Film className="w-5 h-5" />
-                </div>
+          {/* Big Play Overlay Icon when paused */}
+          {!isPlaying && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/25 backdrop-blur-[1px]">
+              <div className="w-12 h-12 rounded-full bg-[#9D1D53]/90 text-white flex items-center justify-center shadow-xl pl-0.5 group-hover:scale-110 transition-transform">
+                <Film className="w-5 h-5" />
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Quick resolution badge on corner */}
-            {videoResolution && (
-              <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded text-[10px] font-mono bg-black/75 text-gray-300 border border-white/10 pointer-events-none backdrop-blur-sm">
-                {videoResolution.width} × {videoResolution.height}
-              </div>
-            )}
-          </div>
+          {/* Quick resolution badge */}
+          {videoResolution && (
+            <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded text-[10px] font-mono bg-black/60 text-gray-300 border border-white/10 pointer-events-none">
+              {videoResolution.width} × {videoResolution.height}
+            </div>
+          )}
         </div>
 
         {/* 
-          Timeline & Transport Area:
-          Takes remaining ~32% height, comfortably sitting on screen without any clipping!
+          Timeline & Transport Controls:
+          Occupies remaining 30% height (always 100% visible, seamless borders)
         */}
-        <div className="flex-1 min-h-0 flex flex-col justify-between shrink-0 bg-white/40 dark:bg-[#0B0D12] border-t border-gray-200/40 dark:border-white/[0.04] overflow-hidden">
+        <div className="h-[30%] min-h-[130px] shrink-0 flex flex-col justify-between border-t border-gray-200/40 dark:border-[#1A1E26] bg-gray-50/30 dark:bg-[#0A0D12] overflow-hidden">
           <Timeline
             duration={duration}
             currentTime={currentTime}
@@ -305,7 +292,6 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
             darkMode={darkMode}
           />
 
-          {/* Transport Controls (Under Timeline: play/pause, prev/next checkpoints) */}
           <TransportControls
             isPlaying={isPlaying}
             onTogglePlay={handlePlayPauseToggle}
@@ -325,95 +311,84 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
 
       {/* 
         ========================================================================
-        RIGHT COLUMN: Inspector / Sidebar with Seamless Styling
+        RIGHT COLUMN: Seamless Session Inspector (No nested card boxes)
         ========================================================================
       */}
-      <div className="w-80 lg:w-96 shrink-0 h-full flex flex-col justify-between p-5 bg-white/60 dark:bg-[#0F1116] border-l border-gray-200/40 dark:border-white/[0.04] overflow-y-auto">
-        <div className="space-y-4">
-          {/* Section Header (Seamless) */}
-          <div className="flex items-center justify-between pb-2">
+      <div className="w-full md:w-80 lg:w-88 shrink-0 h-full flex flex-col justify-between bg-white dark:bg-[#0D0F12] overflow-y-auto">
+        <div className="flex flex-col">
+          {/* Section Header */}
+          <div className="px-5 py-3.5 border-b border-gray-200/30 dark:border-[#1A1E26] flex items-center justify-between shrink-0">
             <span className="text-[11px] font-mono uppercase tracking-[0.2em] font-semibold text-gray-400 dark:text-zinc-400">
               Инспектор сессии
             </span>
             <span className="w-1.5 h-1.5 rounded-full bg-[#9D1D53]" />
           </div>
 
-          {/* Video Metadata Card (Seamless dark surface, no harsh borders) */}
-          <div className="p-4 rounded-xl bg-gray-100/70 dark:bg-[#15181F] space-y-3">
-            <div className="text-xs font-semibold text-gray-900 dark:text-white flex items-center space-x-1.5">
-              <FileVideo className="w-4 h-4 text-[#9D1D53]" />
-              <span className="truncate">{videoData?.name}</span>
+          {/* Seamless Metadata Rows (No nested cards, clean tabular layout) */}
+          <div className="px-5 py-4 space-y-3 border-b border-gray-200/30 dark:border-[#1A1E26]">
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-gray-400 dark:text-zinc-500">Файл</span>
+              <span className="font-medium text-gray-800 dark:text-gray-200 truncate max-w-[170px]" title={videoData?.name}>
+                {videoData?.name}
+              </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-gray-500 dark:text-zinc-400 pt-1">
-              <div>
-                <span className="block text-[10px] uppercase text-gray-400 dark:text-zinc-500">
-                  Размер
-                </span>
-                <span className="text-gray-800 dark:text-gray-200 font-medium">
-                  {videoData?.size || '—'}
-                </span>
-              </div>
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-gray-400 dark:text-zinc-500">Длительность</span>
+              <span className="text-gray-800 dark:text-gray-200">
+                {duration ? `${duration.toFixed(1)} с` : '—'}
+              </span>
+            </div>
 
-              <div>
-                <span className="block text-[10px] uppercase text-gray-400 dark:text-zinc-500">
-                  Длительность
-                </span>
-                <span className="text-gray-800 dark:text-gray-200 font-medium">
-                  {duration ? `${duration.toFixed(1)} с` : '—'}
-                </span>
-              </div>
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-gray-400 dark:text-zinc-500">Разрешение</span>
+              <span className="text-gray-800 dark:text-gray-200">
+                {videoResolution ? `${videoResolution.width} × ${videoResolution.height}` : '—'}
+              </span>
+            </div>
 
-              <div>
-                <span className="block text-[10px] uppercase text-gray-400 dark:text-zinc-500">
-                  Разрешение
-                </span>
-                <span className="text-gray-800 dark:text-gray-200 font-medium">
-                  {videoResolution ? `${videoResolution.width}×${videoResolution.height}` : '—'}
-                </span>
-              </div>
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-gray-400 dark:text-zinc-500">Размер</span>
+              <span className="text-gray-800 dark:text-gray-200">{videoData?.size || '—'}</span>
+            </div>
 
-              <div>
-                <span className="block text-[10px] uppercase text-gray-400 dark:text-zinc-500">
-                  Статус
-                </span>
-                <span className="text-gray-800 dark:text-gray-200 font-medium capitalize">
-                  {analysisStatus === 'done' ? 'Готово' : analysisStatus === 'analyzing' ? 'Анализ' : 'В очереди'}
-                </span>
-              </div>
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-gray-400 dark:text-zinc-500">Статус</span>
+              <span className="text-gray-800 dark:text-gray-200">
+                {analysisStatus === 'done' ? 'Завершён' : analysisStatus === 'analyzing' ? 'Анализ...' : 'Готов к анализу'}
+              </span>
             </div>
           </div>
 
-          {/* Dynamic Analysis Results / Placeholder Info */}
+          {/* Seamless State Content (No dashed box) */}
           {analysisStatus === 'idle' && (
-            <div className="p-4 rounded-xl bg-gray-100/40 dark:bg-[#15181F]/60 text-center space-y-2">
-              <Info className="w-5 h-5 mx-auto text-gray-400 dark:text-zinc-500" />
+            <div className="px-5 py-6 text-center space-y-1.5">
               <div className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 Видео готово к обработке
               </div>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed font-sans">
-                Нажмите кнопку «Анализировать видео» ниже, чтобы запустить локальные модели детекции и сопоставление со статьями НБРК.
+              <p className="text-[11px] text-gray-400 dark:text-zinc-500 leading-relaxed font-sans max-w-xs mx-auto">
+                Запустите локальные модели детекции нарушений кассовой дисциплины (НБРК).
               </p>
             </div>
           )}
 
           {analysisStatus === 'analyzing' && (
-            <div className="p-5 rounded-xl bg-[#9D1D53]/5 dark:bg-[#9D1D53]/10 text-center space-y-3">
-              <Loader2 className="w-6 h-6 mx-auto text-[#9D1D53] animate-spin" />
-              <div className="text-xs font-semibold text-gray-900 dark:text-white">
+            <div className="px-5 py-6 text-center space-y-2">
+              <Loader2 className="w-5 h-5 mx-auto text-[#9D1D53] animate-spin" />
+              <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
                 Анализ видеопотока...
               </div>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                Выполняется трекинг позы кассира, детекция открытого сейфа и поиск нарушений.
+              <p className="text-[11px] text-gray-400 dark:text-zinc-500 font-sans">
+                Детекция позы кассира, сейфа и сопоставление с нормами
               </p>
             </div>
           )}
 
           {analysisStatus === 'done' && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs font-semibold text-gray-900 dark:text-white">
-                <span>Обнаруженные нарушения:</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-sky-500/10 text-sky-500 dark:text-sky-400 border border-sky-500/20">
+            <div className="px-5 py-4 space-y-3">
+              <div className="flex items-center justify-between text-[11px] font-mono text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
+                <span>Обнаружено нарушений:</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-sky-500/10 text-sky-500 dark:text-sky-400 border border-sky-500/20">
                   {detections.length}
                 </span>
               </div>
@@ -423,16 +398,11 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
                   <div
                     key={d.id}
                     onClick={() => handleSeek(d.timecode)}
-                    className="p-3 rounded-lg bg-gray-100/60 dark:bg-[#15181F] hover:bg-gray-100 dark:hover:bg-[#1A1E26] cursor-pointer transition-all space-y-1 group"
+                    className="p-2.5 rounded hover:bg-gray-100/60 dark:hover:bg-[#161920] cursor-pointer transition-colors border-l-2 border-sky-400 pl-3 space-y-0.5 group"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono uppercase text-sky-500 font-semibold flex items-center space-x-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
-                        <span>Таймкод: {d.timecode.toFixed(1)} с</span>
-                      </span>
-                      <span className="text-[10px] font-mono text-gray-400 dark:text-zinc-500">
-                        {d.lawRef}
-                      </span>
+                    <div className="flex items-center justify-between text-[10px] font-mono text-sky-500">
+                      <span>{d.timecode.toFixed(1)} с</span>
+                      <span className="text-gray-400 dark:text-zinc-500">{d.lawRef}</span>
                     </div>
                     <div className="text-xs text-gray-800 dark:text-gray-200 font-medium group-hover:text-sky-400 transition-colors">
                       {d.label}
@@ -445,16 +415,16 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
         </div>
 
         {/* 
-          BOTTOM: Primary Action - Analyze Button (Seamlessly anchored)
+          BOTTOM: Primary Action - Analyze Button (Seamless footer)
         */}
-        <div className="pt-4">
+        <div className="p-5 border-t border-gray-200/30 dark:border-[#1A1E26]">
           <button
             onClick={handleAnalyze}
             disabled={isAnalyzing}
-            className={`w-full py-3 px-4 rounded-xl font-medium text-xs tracking-wider uppercase font-mono shadow-sm flex items-center justify-center space-x-2 transition-all ${
+            className={`w-full py-3 px-4 rounded-lg font-medium text-xs tracking-wider uppercase font-mono shadow-sm flex items-center justify-center space-x-2 transition-all ${
               isAnalyzing
                 ? 'bg-gray-400 dark:bg-zinc-700 text-white cursor-not-allowed'
-                : 'bg-[#9D1D53] hover:bg-[#861846] text-white active:scale-[0.98]'
+                : 'bg-[#9D1D53] hover:bg-[#861846] text-white active:scale-[0.99]'
             }`}
           >
             {isAnalyzing ? (
