@@ -91,10 +91,10 @@ The opening screensaver serves as an editorial brand reveal rather than an anima
    - **Lifecycle:** 1.0s active hold $\rightarrow$ 0.95s crisp dissolve $\rightarrow$ completely unmounts from the DOM at `1.95s`.
 4. **Main Page Entrance (Optical Focus Transition):**
    - Triggers at `1.0s` (`onStartExit`), running in lockstep with the screensaver's dissolve.
-   - Initial State: `opacity: 0`, `filter: blur(20px)`, `transform: scale(0.985)`.
+   - Initial State: `opacity: 0`, `filter: blur(14px)`, `transform: scale(0.992)`.
    - Target State: `opacity: 1`, `filter: blur(0px)`, `transform: scale(1)`.
-   - Timing: `0.95s cubic-bezier(0.2, 0, 0, 1)`.
-   - Optical Result: Creates a seamless cross-focus effect—the intro logo defocusses and evaporates while the application workspace sharpens into crystal clarity.
+   - Timing: `0.65s cubic-bezier(0.16, 1, 0.3, 1)`.
+   - Optical Result: Interface rapidly snaps into focus within ~300ms and reaches full crystal clarity in 650ms, eliminating perceptible loading delays.
 
 ---
 

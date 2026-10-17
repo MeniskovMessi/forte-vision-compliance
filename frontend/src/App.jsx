@@ -57,11 +57,11 @@ export default function App() {
       {/* Main Page Content (Coordinated smooth blur & fade-in reveal into sharp focus) */}
       <div
         style={{
-          transition: 'opacity 0.95s cubic-bezier(0.2, 0, 0, 1), filter 0.95s cubic-bezier(0.2, 0, 0, 1), transform 0.95s cubic-bezier(0.2, 0, 0, 1)',
+          transition: 'opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), filter 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1)',
           willChange: 'opacity, filter, transform',
           opacity: contentRevealed ? 1 : 0,
-          filter: contentRevealed ? 'blur(0px)' : 'blur(20px)',
-          transform: contentRevealed ? 'scale(1)' : 'scale(0.985)',
+          filter: contentRevealed ? 'blur(0px)' : 'blur(14px)',
+          transform: contentRevealed ? 'scale(1)' : 'scale(0.992)',
         }}
         className="flex-1 flex flex-col min-h-screen"
       >
