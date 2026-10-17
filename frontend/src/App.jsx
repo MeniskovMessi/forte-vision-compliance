@@ -49,7 +49,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] dark:bg-[#0D0F12] text-[#111827] dark:text-[#EDEDEF] transition-colors flex flex-col font-sans overflow-x-hidden">
+    <div className="h-screen w-screen bg-[#F9FAFB] dark:bg-[#0D0F12] text-[#111827] dark:text-[#EDEDEF] transition-colors flex flex-col font-sans overflow-hidden">
       {/* Screensaver Overlay (Auto on first visit, interactive on demand) */}
       {showScreensaver && (
         <Screensaver
@@ -74,7 +74,7 @@ export default function App() {
           filter: contentRevealed ? 'blur(0px)' : 'blur(14px)',
           transform: contentRevealed ? 'scale(1)' : 'scale(0.992)',
         }}
-        className="flex-1 flex flex-col h-screen overflow-hidden"
+        className="flex-1 min-h-0 h-full flex flex-col overflow-hidden"
       >
         {/* Main Header */}
         <Header
@@ -94,7 +94,7 @@ export default function App() {
             </main>
 
             {/* Footer on upload view */}
-            <footer className="border-t border-gray-200 dark:border-[#22272E] py-3 px-6 text-center text-xs font-mono text-gray-400">
+            <footer className="border-t border-gray-200/40 dark:border-white/[0.04] py-2.5 px-6 text-center text-xs font-mono text-gray-400 shrink-0">
               <p>PRISM • ForteBank Кассовый контроль • Нормативная база adilet.zan.kz</p>
             </footer>
           </>

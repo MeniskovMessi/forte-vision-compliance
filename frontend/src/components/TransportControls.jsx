@@ -38,7 +38,7 @@ export default function TransportControls({
   }
 
   return (
-    <div className="w-full px-4 py-2 border-t border-gray-200 dark:border-[#22272E] bg-white/70 dark:bg-[#12151B]/90 flex items-center justify-between select-none">
+    <div className="w-full px-4 py-1.5 border-t border-gray-200/40 dark:border-white/[0.04] bg-transparent flex items-center justify-between select-none shrink-0">
       {/* Left: Digital Timecode Counter */}
       <div className="flex items-center space-x-3">
         <div className="flex items-baseline space-x-1 font-mono text-sm">

@@ -3,8 +3,8 @@ import { Sun, Moon, Play } from 'lucide-react'
 
 export default function Header({ darkMode, onToggleTheme, onReplayIntro }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-200 dark:border-[#22272E] bg-white/95 dark:bg-[#0D0F12]/95 backdrop-blur-sm transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+    <header className="sticky top-0 z-40 border-b border-gray-200/40 dark:border-white/[0.04] bg-white/95 dark:bg-[#0D0F12]/95 backdrop-blur-sm transition-colors shrink-0">
+      <div className="w-full px-4 sm:px-6 h-14 flex items-center justify-between">
         {/* Brand */}
         <div className="flex items-center space-x-2.5">
           <span className="font-semibold tracking-[0.2em] text-sm sm:text-base font-sans text-gray-900 dark:text-white">

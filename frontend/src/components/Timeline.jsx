@@ -77,11 +77,11 @@ export default function Timeline({
   })
 
   return (
-    <div className="w-full flex flex-col select-none px-4 py-2">
+    <div className="w-full flex flex-col select-none px-4 py-1.5">
       {/* 
         1. Top Timeline Ruler (as drawn in sketch: horizontal line with ticks above the red region)
       */}
-      <div className="relative h-6 w-full flex items-end pb-1 border-b border-gray-400/30 dark:border-zinc-700/60">
+      <div className="relative h-5 w-full flex items-end pb-1 border-b border-gray-400/20 dark:border-white/[0.04]">
         {ticks.map((tick, idx) => (
           <div
             key={idx}
@@ -89,15 +89,15 @@ export default function Timeline({
             style={{ left: `${tick.percent}%` }}
           >
             {tick.isMajor && (
-              <span className="text-[9px] font-mono text-gray-500 dark:text-zinc-400 mb-1 leading-none select-none">
+              <span className="text-[9px] font-mono text-gray-400 dark:text-zinc-500 mb-0.5 leading-none select-none">
                 {formatTimecode(tick.time)}
               </span>
             )}
             <div
               className={`w-[1px] ${
                 tick.isMajor
-                  ? 'h-2.5 bg-gray-600 dark:bg-zinc-400'
-                  : 'h-1.5 bg-gray-400/60 dark:bg-zinc-600/60'
+                  ? 'h-2 bg-gray-500 dark:bg-zinc-500'
+                  : 'h-1 bg-gray-400/40 dark:bg-zinc-700/60'
               }`}
             />
           </div>
@@ -110,7 +110,7 @@ export default function Timeline({
       <div
         ref={trackRef}
         onMouseDown={handleMouseDown}
-        className="relative h-14 mt-1.5 rounded bg-gray-100/80 dark:bg-[#15181E] border border-gray-200 dark:border-[#22272E] cursor-pointer overflow-visible group"
+        className="relative h-12 mt-1 rounded bg-black/10 dark:bg-[#07090C] border border-gray-200/30 dark:border-white/[0.04] cursor-pointer overflow-visible group"
       >
         {/* Red Trim Container Box (Sketched in red outline) */}
         <div className="absolute inset-0 border-2 border-red-500/85 dark:border-red-500/90 rounded bg-red-500/[0.04] dark:bg-red-500/[0.07] pointer-events-none">
