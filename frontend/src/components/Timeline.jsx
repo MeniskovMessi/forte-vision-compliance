@@ -186,7 +186,7 @@ export default function Timeline({
         {/* ========================================================================= */}
         <div
           onMouseDown={handleTimeIndicatorMouseDown}
-          className="relative w-full h-8 mb-2 cursor-pointer group/gray"
+          className="relative w-full h-8 mb-1.5 cursor-pointer group/gray"
           title="Кликните на серой шкале времени для перемещения указателя времени"
         >
           {/* Main Horizontal Timeline Gray Line */}
@@ -266,57 +266,63 @@ export default function Timeline({
 
             {/* 
               LEFT TRIMMER HANDLE: Directed downwards at left end (⎾)
+              Seamlessly connected to horizontal red line with zero gap
             */}
             <div
               onMouseDown={handleTrimStartMouseDown}
-              className="absolute top-0 left-0 -translate-x-1/2 w-6 h-8 flex flex-col items-center justify-start cursor-ew-resize group/lhandle z-20"
+              className="absolute -top-1 -left-2.5 w-6 h-8 cursor-ew-resize group/lhandle z-20 select-none"
               title={`Начало обрезки: ${formatTimecode(trimStart)} (потяните для изменения)`}
             >
               <svg
-                width="14"
-                height="22"
-                viewBox="0 0 14 22"
+                width="16"
+                height="20"
+                viewBox="0 0 16 20"
                 fill="none"
-                className="text-red-500 filter drop-shadow-sm group-hover/lhandle:text-red-400 transition-colors"
+                style={{ position: 'absolute', left: '10px', top: '4px' }}
+                className="text-red-500 filter drop-shadow-sm group-hover/lhandle:text-red-400 transition-colors pointer-events-none"
               >
-                {/* Vertical drop leg going downwards with bottom foot pointing inwards */}
+                {/* Continuous corner and downward bracket leg */}
                 <path
-                  d="M1.5 0V18H10"
+                  d="M10 1.25 L 1.25 1.25 V 15 H 9"
                   stroke="currentColor"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                <line x1="1.5" y1="6" x2="6.5" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <line x1="1.5" y1="12" x2="6.5" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                {/* Tactile grip ticks on the downward handle */}
+                <line x1="1.25" y1="6" x2="6.25" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="1.25" y1="10.5" x2="6.25" y2="10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
 
             {/* 
               RIGHT TRIMMER HANDLE: Directed downwards at right end (⏋)
+              Seamlessly connected to horizontal red line with zero gap
             */}
             <div
               onMouseDown={handleTrimEndMouseDown}
-              className="absolute top-0 right-0 translate-x-1/2 w-6 h-8 flex flex-col items-center justify-start cursor-ew-resize group/rhandle z-20"
+              className="absolute -top-1 -right-2.5 w-6 h-8 cursor-ew-resize group/rhandle z-20 select-none"
               title={`Конец обрезки: ${formatTimecode(trimEnd)} (потяните для изменения)`}
             >
               <svg
-                width="14"
-                height="22"
-                viewBox="0 0 14 22"
+                width="16"
+                height="20"
+                viewBox="0 0 16 20"
                 fill="none"
-                className="text-red-500 filter drop-shadow-sm group-hover/rhandle:text-red-400 transition-colors"
+                style={{ position: 'absolute', right: '10px', top: '4px' }}
+                className="text-red-500 filter drop-shadow-sm group-hover/rhandle:text-red-400 transition-colors pointer-events-none"
               >
-                {/* Vertical drop leg going downwards with bottom foot pointing inwards */}
+                {/* Continuous corner and downward bracket leg */}
                 <path
-                  d="M12.5 0V18H4"
+                  d="M6 1.25 L 14.75 1.25 V 15 H 7"
                   stroke="currentColor"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                <line x1="12.5" y1="6" x2="7.5" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <line x1="12.5" y1="12" x2="7.5" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                {/* Tactile grip ticks on the downward handle */}
+                <line x1="14.75" y1="6" x2="9.75" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="14.75" y1="10.5" x2="9.75" y2="10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
           </div>
