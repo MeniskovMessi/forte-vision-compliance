@@ -528,19 +528,28 @@ export default function HistoryModal({ isOpen, onClose }) {
                                 Подтверждающие стоп-кадры ({frames.length})
                               </span>
                               <div className="grid grid-cols-3 gap-2">
-                                {frames.map((frameB64, fIdx) => {
-                                  const src = frameB64.startsWith('data:')
-                                    ? frameB64
-                                    : `data:image/jpeg;base64,${frameB64}`
+                                {frames.map((ef, fIdx) => {
+                                  const rawB64 =
+                                    typeof ef === 'string'
+                                      ? ef
+                                      : ef?.image_base64 || ef?.base64 || ef?.data || ''
+                                  if (!rawB64 || typeof rawB64 !== 'string') return null
+                                  const src = rawB64.startsWith('data:')
+                                    ? rawB64
+                                    : `data:image/jpeg;base64,${rawB64}`
+                                  const frameTc =
+                                    typeof ef === 'object' && ef?.timestamp_sec != null
+                                      ? ef.timestamp_sec
+                                      : v.timecode_sec
                                   return (
                                     <button
                                       key={fIdx}
                                       onClick={() =>
                                         setPreviewFrame({
                                           src,
-                                          title: `${v.type} — Кадр #${fIdx + 1} (${formatMMSS(
-                                            v.timecode_sec
-                                          )})`,
+                                          title: `${v.type || 'Нарушение'} — Кадр #${
+                                            fIdx + 1
+                                          } (${formatMMSS(frameTc)})`,
                                         })
                                       }
                                       className="group relative aspect-video bg-black rounded-sm overflow-hidden border border-gray-200 dark:border-[#1C2029]"
@@ -550,6 +559,9 @@ export default function HistoryModal({ isOpen, onClose }) {
                                         alt={`Evidence frame ${fIdx + 1}`}
                                         className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform"
                                       />
+                                      <span className="absolute bottom-1 left-1 px-1 py-0.5 rounded-sm bg-black/75 text-[9px] font-mono text-zinc-200 tabular-nums">
+                                        {formatMMSS(frameTc)}
+                                      </span>
                                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center">
                                         <Maximize2 className="w-3.5 h-3.5 text-white opacity-0 group-hover:opacity-100 transition" />
                                       </div>
