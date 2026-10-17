@@ -91,11 +91,18 @@ On top of $\mathbf{s}_{1:T}$, we run a **Dual Temporal Engine**:
 - [ ] **4.3.** Test the API with `curl` commands matching Case Section 10.
 
 ### Phase 5: Frontend Web Interface (`frontend/`)
-- [ ] **5.1.** Build a clean, modern, responsive Web UI for bank security/compliance auditors:
-  - Drag-and-drop `.mov` upload with live progress status (`processing` $\rightarrow$ `done`).
-  - Clear Verdict Banner: **«Нарушение не обнаружено»** (Green) vs. **«Обнаружены признаки возможных нарушений»** (Red Alert).
-  - Interactive Video Player with clickable **Timeline Violation Markers** that jump directly to `timecode_sec`.
-  - **Violation Cards** showing: Violation Type, Timestamp badge, 1–3 zoomable Evidence Frames, Factual Visual Explanation, and a **Legal Grounding Box** citing the exact RK National Bank Document, Clause, and clickable `adilet.zan.kz` link retrieved from `pgvector`.
+- [ ] **5.1.** Build a high-aesthetic, responsive Web UI for ForteBank compliance auditors (React + Vite + Tailwind + Framer Motion):
+  - **Cinematic Screensaver / Splash Intro:** 2–3 second logo reveal with neural scanline animation, smoothly fading out into the executive dark workspace.
+  - **CCTV Interval Range Trimmer:** Drag-and-drop `.mov`/`.mp4` upload with duration/FPS/thumbnail inspection and dual-handle `[start_sec, end_sec]` slider for slicing hours-long CCTV exports.
+  - **Interactive Cinema Player & Smart Timeline:** Clickable violation markers on the seekbar.
+  - **Pre-Roll Replay (`T - 5s → T`) & Auto-Stop:** Clicking any violation card seeks to `T - 5s`, plays the 5-second lead-up, and automatically pauses at `T`.
+  - **Dynamic Evidence Bounding-Box Overlay:** High-contrast rectangle (`evidence_bbox`) and label rendered on top of the paused video frame at `T`.
+  - **Evidence Media Export & Multi-Cut Video Compilation:**
+    - Export single evidence keyframe as `.jpg` image (with/without bounding box).
+    - Export single evidence $\pm N$ seconds/frames as a standalone `.mp4` video clip.
+    - Select multiple violation timelines via checkboxes and compile them into a single consolidated `.mp4` video of cuts (`POST /api/v1/jobs/{job_id}/evidence/compile`).
+  - **Legal Grounding Panel:** Cites exact RK National Bank Document, Clause, normative text, and direct clickable `adilet.zan.kz` link retrieved via `pgvector`.
+  - **Audit History & Regulations Knowledge Base:** Modal/drawer to inspect past jobs and browse all 16 NBRK regulations.
 
 ### Phase 6: Public URL Deployment, Documentation & Final Verification
 - [ ] **6.1.** Set up a public HTTPS tunnel (`cloudflared` / `ngrok`) and verify external `curl` access with `X-API-Key`.
