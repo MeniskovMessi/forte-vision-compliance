@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import Header from './components/Header'
 import Screensaver from './components/Screensaver'
+import UploadDropzone from './components/UploadDropzone'
+import VideoEditor from './components/VideoEditor'
 
 export default function App() {
   // Theme state: read from localStorage, default to 'light'
@@ -18,6 +20,9 @@ export default function App() {
   const [isManualScreensaver, setIsManualScreensaver] = useState(false)
   const [screensaverKey, setScreensaverKey] = useState(0)
   const [contentRevealed, setContentRevealed] = useState(false)
+
+  // Uploaded video state
+  const [uploadedVideo, setUploadedVideo] = useState(null)
 
   // Persist theme to localStorage and sync 'dark' class on html
   useEffect(() => {
@@ -69,7 +74,7 @@ export default function App() {
           filter: contentRevealed ? 'blur(0px)' : 'blur(14px)',
           transform: contentRevealed ? 'scale(1)' : 'scale(0.992)',
         }}
-        className="flex-1 flex flex-col min-h-screen"
+        className="flex-1 flex flex-col h-screen overflow-hidden"
       >
         {/* Main Header */}
         <Header
@@ -78,42 +83,28 @@ export default function App() {
           onReplayIntro={handleReplayIntro}
         />
 
-      {/* Main Workspace (Clean foundation for step-by-step feature development) */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col items-center justify-center text-center">
-        <div className="max-w-xl p-8 rounded-xl border border-gray-200 dark:border-[#22272E] bg-white dark:bg-[#16191E] shadow-sm space-y-4">
-          <div className="flex items-center justify-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-[#9D1D53]" />
-            <span className="font-semibold tracking-[0.2em] text-sm uppercase">PRISM</span>
-          </div>
+        {/* View Switcher: Upload Dropzone vs Unscrollable Editor UI */}
+        {!uploadedVideo ? (
+          <>
+            <main className="flex-1 flex flex-col items-center justify-center overflow-y-auto">
+              <UploadDropzone
+                onVideoSelect={(data) => setUploadedVideo(data)}
+                darkMode={darkMode}
+              />
+            </main>
 
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Система видеоконтроля кассовой зоны
-          </h2>
-
-          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-sans">
-            Главный экран инициализирован в стиле Linear. Текущая тема:{' '}
-            <strong className="text-gray-800 dark:text-gray-200 font-mono">
-              {darkMode ? 'Тёмная' : 'Светлая'}
-            </strong>{' '}
-            (сохраняется в памяти браузера).
-          </p>
-
-          <div className="pt-2 flex items-center justify-center space-x-3 text-xs font-mono text-gray-400">
-            <span className="px-2 py-1 rounded bg-gray-100 dark:bg-[#0E1015] border border-gray-200 dark:border-[#22272E]">
-              frontend/
-            </span>
-            <span>•</span>
-            <span className="px-2 py-1 rounded bg-gray-100 dark:bg-[#0E1015] border border-gray-200 dark:border-[#22272E]">
-              Linear High-Density
-            </span>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-200 dark:border-[#22272E] py-3.5 px-6 text-center text-xs font-mono text-gray-400">
-        <p>PRISM • ForteBank Кассовый контроль • Нормативная база НБРК</p>
-      </footer>
+            {/* Footer on upload view */}
+            <footer className="border-t border-gray-200 dark:border-[#22272E] py-3 px-6 text-center text-xs font-mono text-gray-400">
+              <p>PRISM • ForteBank Кассовый контроль • Нормативная база adilet.zan.kz</p>
+            </footer>
+          </>
+        ) : (
+          <VideoEditor
+            videoData={uploadedVideo}
+            onBack={() => setUploadedVideo(null)}
+            darkMode={darkMode}
+          />
+        )}
       </div>
     </div>
   )
