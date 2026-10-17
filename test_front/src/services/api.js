@@ -1,5 +1,5 @@
 const API_BASE = '/api/v1'
-const API_KEY = 'fortebank-secret-key-2026'
+const API_KEY = 'fortebank-datathon-2026-secret-key'
 
 const authHeaders = {
   'X-API-Key': API_KEY,
