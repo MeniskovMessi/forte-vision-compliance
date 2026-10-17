@@ -1,0 +1,27 @@
+# Large dataset & archives (keep local, do not push 280MB+ videos to git)
+open.zip
+dataset/open/videos/*.mov
+
+# Models & local storage
+models/
+storage/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+
+# Frontend / Node
+node_modules/
+dist/
+.vite/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
