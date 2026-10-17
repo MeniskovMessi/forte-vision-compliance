@@ -34,9 +34,18 @@ class LocalVLMVerifier:
         self.enable_ollama = os.getenv("ENABLE_LOCAL_VLM", "false").lower() in ("true", "1", "yes")
 
     @staticmethod
+    def _extract_ts(s) -> float:
+        if hasattr(s, "timestamp_sec"):
+            return float(s.timestamp_sec)
+        if isinstance(s, dict) and "timestamp_sec" in s:
+            return float(s["timestamp_sec"])
+        return 0.0
+
+    @classmethod
     def compute_evidence_bbox(
+        cls,
         rule_code: str,
-        timeline: List[Dict[str, Any]],
+        timeline: Any,
         peak_sec: float,
         meta: Dict[str, Any],
     ) -> Dict[str, Any]:
@@ -46,22 +55,20 @@ class LocalVLMVerifier:
         Used by the Web UI video player to draw an interactive rectangle overlay when playback
         pauses at the violation timestamp (`T` after playing from `T - 5s`).
         """
-        zones = meta.get("zones", {})
-        layout = zones.get("layout", "A_right_laptop")
+        zones = meta.get("zones", {}) if isinstance(meta, dict) else {}
+        layout = zones.get("layout", "A_right_laptop") if isinstance(zones, dict) else "A_right_laptop"
 
         # Find the closest spatial frame state S(t) to peak_sec
         frame_state = None
         if timeline:
-            frame_state = min(timeline, key=lambda s: abs(float(s.get("timestamp_sec", 0.0)) - peak_sec))
+            frame_state = min(timeline, key=lambda s: abs(cls._extract_ts(s) - peak_sec))
 
-        persons = (frame_state or {}).get("persons", [])
-        objects = (frame_state or {}).get("objects", [])
+        persons = getattr(frame_state, "persons", []) if frame_state else []
+        if isinstance(frame_state, dict):
+            persons = frame_state.get("persons", [])
 
         # 1. Laptop left unlocked / open
         if rule_code == "UNATTENDED_LAPTOP_OPEN":
-            for obj in objects:
-                if obj.get("class_name") in ("laptop", "tv"):
-                    return {"bbox_norm": obj["bbox"], "label": "Незаблокированный ноутбук (АРМ)"}
             box = zones.get("laptop", [0.46, 0.35, 0.72, 0.56] if "A" in layout else [0.16, 0.35, 0.44, 0.56])
             return {"bbox_norm": [round(float(v), 3) for v in box], "label": "Незаблокированный ноутбук (АРМ)"}
 
@@ -72,24 +79,20 @@ class LocalVLMVerifier:
 
         # 3. Inkassator bag left unattended or improper handover
         if rule_code in ("UNATTENDED_CASH_BAG", "INKASSATOR_HANDOVER_VIOLATION"):
-            for obj in objects:
-                if obj.get("class_name") in ("handbag", "suitcase", "backpack"):
-                    return {"bbox_norm": obj["bbox"], "label": "Инкассаторская сумка / баул"}
             return {"bbox_norm": [0.30, 0.44, 0.76, 0.90], "label": "Зона передачи инкассаторской сумки"}
 
         # 4. Foreign objects / cups / personal items on desk
         if rule_code in ("FOREIGN_OBJECTS_PERSONAL_ITEMS", "PERSONAL_ITEMS_WORKSPACE"):
-            for obj in objects:
-                if obj.get("class_name") in ("cup", "bottle", "wine glass", "bowl", "handbag", "backpack", "suitcase"):
-                    return {"bbox_norm": obj["bbox"], "label": f"Посторонний предмет ({obj.get('class_name')})"}
             box = zones.get("desk_surface", [0.22, 0.33, 0.68, 0.58])
             return {"bbox_norm": [round(float(v), 3) for v in box], "label": "Посторонний предмет в рабочей зоне кассы"}
 
         # 5. Unauthorized 3rd party present in cash room
         if rule_code == "UNAUTHORIZED_THIRD_PARTY_PRESENT":
-            if len(persons) >= 3:
-                p_sorted = sorted(persons, key=lambda p: p["bbox"][1])
-                return {"bbox_norm": p_sorted[0]["bbox"], "label": "Постороннее (третье) лицо в кассе"}
+            if persons and len(persons) >= 3:
+                p3 = persons[-1]
+                bbox = getattr(p3, "bbox", None) or (p3.get("bbox") if isinstance(p3, dict) else None)
+                if bbox and len(bbox) == 4:
+                    return {"bbox_norm": [round(float(v), 3) for v in bbox], "label": "Постороннее (третье) лицо в кассе"}
             return {"bbox_norm": [0.12, 0.10, 0.64, 0.82], "label": "Постороннее (третье) лицо в кассе"}
 
         # 6. Door left unlocked on entry
