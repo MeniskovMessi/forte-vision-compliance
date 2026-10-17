@@ -89,6 +89,12 @@ The opening screensaver serves as an editorial brand reveal rather than an anima
    - **Background Layer:** Pure `opacity 1.2s cubic-bezier(0.2, 0, 0, 1)`. No blur filter is applied to the background container, ensuring edges and corners stay 100% rectilinear with zero rounded border or inward-curving artifacts.
    - **Typography Layer:** Soft `opacity 1.2s`, `filter: blur(28px)`, and `transform: scale(1.03)` with `cubic-bezier(0.2, 0, 0, 1)`.
    - **Lifecycle:** 1.0s active hold $\rightarrow$ 1.2s crisp dissolve $\rightarrow$ completely unmounts from the DOM at `2.2s`.
+4. **Main Page Entrance (Optical Focus Transition):**
+   - Triggers at `1.0s` (`onStartExit`), running in lockstep with the screensaver's dissolve.
+   - Initial State: `opacity: 0`, `filter: blur(20px)`, `transform: scale(0.985)`.
+   - Target State: `opacity: 1`, `filter: blur(0px)`, `transform: scale(1)`.
+   - Timing: `1.2s cubic-bezier(0.2, 0, 0, 1)`.
+   - Optical Result: Creates a seamless cross-focus effect—the intro logo defocusses and evaporates while the application workspace sharpens into crystal clarity.
 
 ---
 

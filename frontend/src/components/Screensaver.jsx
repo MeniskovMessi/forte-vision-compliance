@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 
-export default function Screensaver({ onComplete, isReplaying, darkMode }) {
+export default function Screensaver({ onStartExit, onComplete, isReplaying, darkMode }) {
   const [stage, setStage] = useState('active') // 'active' | 'exiting' | 'hidden'
 
   useEffect(() => {
     // Stage 1: Active hold for 1.0s
     const timer1 = setTimeout(() => {
       setStage('exiting')
+      if (onStartExit) onStartExit()
     }, 1000)
 
     // Stage 2: Fast & crisp 1.2s fadeout completes at 1000ms + 1200ms = 2200ms
