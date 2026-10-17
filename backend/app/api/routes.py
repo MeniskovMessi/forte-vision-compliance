@@ -19,11 +19,11 @@ import uuid
 import shutil
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from concurrent.futures import ThreadPoolExecutor
 
-from fastapi import APIRouter, UploadFile, File, Form, Query, Depends, HTTPException, status
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, UploadFile, File, Form, Query, Body, Depends, HTTPException, status
+from fastapi.responses import FileResponse, Response
 
 from backend.app.config import settings
 from backend.app.auth import verify_api_key
@@ -415,24 +415,159 @@ async def trim_video_endpoint(
     return result
 
 
-@router.get(
-    "/videos/{job_id}/stream",
-    summary="Stream the uploaded or trimmed video file for a given job_id",
-)
-async def stream_job_video_endpoint(job_id: str):
+def _get_job_and_video_path(job_id: str):
     job = repository.get_job(job_id)
     if not job or not job.get("file_path"):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Video file not found for job.")
     fpath = Path(job["file_path"])
     if not fpath.exists():
-        # Check if a physically trimmed version exists in TRIMMED_DIR
         alt_path = settings.TRIMMED_DIR / f"{job_id}_trimmed.mp4"
         if alt_path.exists():
             fpath = alt_path
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Video file no longer on disk.")
+    return job, fpath
+
+
+@router.get(
+    "/videos/{job_id}/stream",
+    summary="Stream the uploaded or trimmed video file for a given job_id",
+)
+async def stream_job_video_endpoint(job_id: str):
+    _, fpath = _get_job_and_video_path(job_id)
     media_type = "video/mp4" if fpath.suffix.lower() == ".mp4" else "video/quicktime"
     return FileResponse(path=str(fpath), media_type=media_type, filename=fpath.name)
+
+
+@router.get(
+    "/jobs/{job_id}/evidence/frame",
+    summary="Export an evidence frame at timestamp_sec (or violation_index) as a downloadable JPEG image (with optional bounding box)",
+)
+async def export_evidence_frame_endpoint(
+    job_id: str,
+    violation_index: int = Query(0, ge=0, description="Index of the detected violation"),
+    timestamp_sec: Optional[float] = Query(None, description="Explicit timestamp (seconds) in video; defaults to violation timecode"),
+    draw_bbox: bool = Query(True, description="Draw the evidence bounding rectangle and timestamp tag on the image"),
+):
+    job, fpath = _get_job_and_video_path(job_id)
+    violations = job.get("violations", [])
+    bbox_norm = None
+    label = None
+    target_t = timestamp_sec
+
+    if 0 <= violation_index < len(violations):
+        v = violations[violation_index]
+        if target_t is None:
+            target_t = float(v.get("relative_timecode_sec", v.get("timecode_sec", 0.0)))
+        ev_bbox = v.get("evidence_bbox") or {}
+        if draw_bbox:
+            bbox_norm = ev_bbox.get("bbox_norm")
+            label = ev_bbox.get("label")
+    elif target_t is None:
+        target_t = 0.0
+
+    jpg_bytes = SpatialPerceptionEngine.extract_evidence_frame_jpeg(
+        video_path=fpath,
+        timestamp_sec=float(target_t),
+        bbox_norm=bbox_norm if draw_bbox else None,
+        label=label,
+    )
+    fname = f"evidence_{job_id}_v{violation_index + 1}_{int(round(target_t))}s.jpg"
+    return Response(
+        content=jpg_bytes,
+        media_type="image/jpeg",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
+
+
+@router.get(
+    "/jobs/{job_id}/evidence/clip",
+    summary="Export a single violation's evidence +- N seconds (or frames) as a standalone .mp4 video clip",
+)
+async def export_evidence_clip_endpoint(
+    job_id: str,
+    violation_index: int = Query(0, ge=0, description="Index of the detected violation"),
+    pad_sec: float = Query(3.0, ge=0.5, le=30.0, description="Seconds before and after the violation timestamp (+- N sec)"),
+    draw_bbox: bool = Query(True, description="Draw the evidence bounding rectangle around the violation peak"),
+):
+    job, fpath = _get_job_and_video_path(job_id)
+    violations = job.get("violations", [])
+    if not violations or violation_index >= len(violations):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Violation index not found on job.")
+
+    v = violations[violation_index]
+    peak_t = float(v.get("relative_timecode_sec", v.get("timecode_sec", 0.0)))
+    ev_bbox = (v.get("evidence_bbox") or {}).get("bbox_norm")
+
+    out_name = f"evidence_clip_{job_id}_v{violation_index + 1}_pm{int(round(pad_sec))}s.mp4"
+    out_path = settings.TRIMMED_DIR / out_name
+    SpatialPerceptionEngine.compile_video_cuts(
+        input_path=fpath,
+        output_path=out_path,
+        cuts=[{
+            "start_sec": max(0.0, peak_t - pad_sec),
+            "end_sec": peak_t + pad_sec,
+            "peak_sec": peak_t,
+            "bbox_norm": ev_bbox,
+        }],
+        draw_bbox=draw_bbox,
+    )
+    return FileResponse(path=str(out_path), media_type="video/mp4", filename=out_name)
+
+
+@router.post(
+    "/jobs/{job_id}/evidence/compile",
+    summary="Compile multiple selected violation timelines (or custom [start_sec, end_sec] cuts) into one single .mp4 video of cuts",
+)
+async def compile_multiple_evidence_cuts_endpoint(
+    job_id: str,
+    payload: Dict[str, Any] = Body(
+        ...,
+        description="Provide either `violation_indices: [0, 1, ...]` + `pad_sec: 3.0`, or explicit `cuts: [{'start_sec': 5, 'end_sec': 12}, ...]`",
+    ),
+):
+    job, fpath = _get_job_and_video_path(job_id)
+    violations = job.get("violations", [])
+    pad_sec = float(payload.get("pad_sec", 3.0))
+    draw_bbox = bool(payload.get("draw_bbox", True))
+
+    cuts: List[Dict[str, Any]] = []
+    if "cuts" in payload and isinstance(payload["cuts"], list) and len(payload["cuts"]) > 0:
+        for c in payload["cuts"]:
+            cuts.append({
+                "start_sec": float(c.get("start_sec", 0.0)),
+                "end_sec": float(c.get("end_sec", 5.0)),
+                "peak_sec": c.get("peak_sec"),
+                "bbox_norm": c.get("bbox_norm"),
+            })
+    else:
+        indices = payload.get("violation_indices")
+        if indices is None:
+            indices = list(range(len(violations)))
+        for idx in indices:
+            if 0 <= int(idx) < len(violations):
+                v = violations[int(idx)]
+                peak_t = float(v.get("relative_timecode_sec", v.get("timecode_sec", 0.0)))
+                ev_bbox = (v.get("evidence_bbox") or {}).get("bbox_norm")
+                cuts.append({
+                    "start_sec": max(0.0, peak_t - pad_sec),
+                    "end_sec": peak_t + pad_sec,
+                    "peak_sec": peak_t,
+                    "bbox_norm": ev_bbox,
+                })
+
+    if not cuts:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No valid evidence cuts selected.")
+
+    out_name = f"compiled_evidence_{job_id}_{len(cuts)}cuts.mp4"
+    out_path = settings.TRIMMED_DIR / out_name
+    SpatialPerceptionEngine.compile_video_cuts(
+        input_path=fpath,
+        output_path=out_path,
+        cuts=cuts,
+        draw_bbox=draw_bbox,
+    )
+    return FileResponse(path=str(out_path), media_type="video/mp4", filename=out_name)
 
 
 @router.get(

@@ -362,6 +362,161 @@ class SpatialPerceptionEngine:
             "method": "opencv_videowriter",
         }
 
+    @staticmethod
+    def extract_evidence_frame_jpeg(
+        video_path: Path,
+        timestamp_sec: float,
+        bbox_norm: Optional[List[float]] = None,
+        label: Optional[str] = None,
+    ) -> bytes:
+        """
+        Extracts a single high-resolution JPEG frame at `timestamp_sec` from `video_path`.
+        Optionally draws the evidence bounding rectangle (`bbox_norm: [x1, y1, x2, y2]`)
+        and timestamp banner on the image for audit export.
+        """
+        cap, tmp_path = SpatialPerceptionEngine._open_video_safe(video_path)
+        if not cap.isOpened():
+            raise RuntimeError(f"Cannot open video file: {video_path}")
+        try:
+            fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            target_idx = max(0, min(total_frames - 1, int(round(timestamp_sec * fps)))) if total_frames > 0 else 0
+            cap.set(cv2.CAP_PROP_POS_FRAMES, target_idx)
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                ret, frame = cap.read()
+            if not ret or frame is None:
+                raise RuntimeError("Could not decode frame at requested timestamp.")
+
+            h, w = frame.shape[:2]
+            if bbox_norm and len(bbox_norm) == 4:
+                x1 = max(0, min(w - 1, int(round(bbox_norm[0] * w))))
+                y1 = max(0, min(h - 1, int(round(bbox_norm[1] * h))))
+                x2 = max(0, min(w - 1, int(round(bbox_norm[2] * w))))
+                y2 = max(0, min(h - 1, int(round(bbox_norm[3] * h))))
+                # Draw glowing crimson/amber evidence rectangle
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (72, 29, 225), 3)
+                cv2.rectangle(frame, (x1 - 1, y1 - 1), (x2 + 1, y2 + 1), (0, 210, 255), 1)
+                tag = f"EVIDENCE @ {timestamp_sec:.1f}s"
+                cv2.rectangle(frame, (x1, max(0, y1 - 26)), (min(w, x1 + 190), y1), (72, 29, 225), -1)
+                cv2.putText(
+                    frame,
+                    tag,
+                    (x1 + 6, max(16, y1 - 7)),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (255, 255, 255),
+                    1,
+                    cv2.LINE_AA,
+                )
+
+            ok, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
+            if not ok:
+                raise RuntimeError("Failed to encode frame to JPEG.")
+            return buf.tobytes()
+        finally:
+            cap.release()
+            if tmp_path and tmp_path.exists():
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
+
+    @staticmethod
+    def compile_video_cuts(
+        input_path: Path,
+        output_path: Path,
+        cuts: List[Dict[str, Any]],
+        draw_bbox: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Extracts one or more `[start_sec, end_sec]` intervals (e.g., `evidence +- N` seconds
+        for a single violation, or multiple selected violation intervals) and compiles them
+        into a single consolidated `.mp4` video of cuts.
+        """
+        cap, tmp_path = SpatialPerceptionEngine._open_video_safe(input_path)
+        if not cap.isOpened():
+            raise RuntimeError(f"Cannot open video for compiling cuts: {input_path}")
+
+        try:
+            fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            orig_duration = total_frames / fps if fps > 0 else 0.0
+
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            writer = cv2.VideoWriter(str(output_path), fourcc, fps, (width, height))
+
+            total_written = 0
+            compiled_segments = []
+
+            for seg_idx, cut in enumerate(cuts):
+                s_sec = max(0.0, float(cut.get("start_sec", 0.0)))
+                e_sec = min(orig_duration, float(cut.get("end_sec", orig_duration)))
+                if e_sec <= s_sec:
+                    continue
+                peak_sec = cut.get("peak_sec")
+                bbox_norm = cut.get("bbox_norm")
+
+                s_frame = max(0, int(round(s_sec * fps)))
+                e_frame = min(total_frames, int(round(e_sec * fps)))
+                cap.set(cv2.CAP_PROP_POS_FRAMES, s_frame)
+
+                seg_written = 0
+                for f_i in range(s_frame, e_frame):
+                    ret, frame = cap.read()
+                    if not ret or frame is None:
+                        break
+                    cur_t = f_i / fps
+                    if draw_bbox and bbox_norm and len(bbox_norm) == 4:
+                        if peak_sec is None or abs(cur_t - float(peak_sec)) <= 1.5:
+                            x1 = max(0, min(width - 1, int(round(bbox_norm[0] * width))))
+                            y1 = max(0, min(height - 1, int(round(bbox_norm[1] * height))))
+                            x2 = max(0, min(width - 1, int(round(bbox_norm[2] * width))))
+                            y2 = max(0, min(height - 1, int(round(bbox_norm[3] * height))))
+                            cv2.rectangle(frame, (x1, y1), (x2, y2), (72, 29, 225), 3)
+                    # Stamp cut number & timestamp badge in top-left corner
+                    badge = f"CUT #{seg_idx + 1} | {cur_t:.1f}s"
+                    cv2.rectangle(frame, (12, 12), (210, 42), (18, 20, 30), -1)
+                    cv2.putText(
+                        frame,
+                        badge,
+                        (20, 33),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.55,
+                        (255, 255, 255),
+                        1,
+                        cv2.LINE_AA,
+                    )
+                    writer.write(frame)
+                    seg_written += 1
+                    total_written += 1
+
+                compiled_segments.append({
+                    "cut_index": seg_idx + 1,
+                    "start_sec": round(s_sec, 2),
+                    "end_sec": round(e_sec, 2),
+                    "frames_written": seg_written,
+                })
+
+            writer.release()
+            return {
+                "output_path": str(output_path),
+                "cuts_count": len(compiled_segments),
+                "total_duration_sec": round(total_written / fps, 2) if fps > 0 else 0.0,
+                "segments": compiled_segments,
+            }
+        finally:
+            cap.release()
+            if tmp_path and tmp_path.exists():
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
+
     def extract_video_timeline(
         self,
         video_path: Path,

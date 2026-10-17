@@ -78,7 +78,22 @@ To give bank auditors immediate visual context when reviewing detected violation
 
 ---
 
-## 4. FastAPI REST API Endpoints (`backend/app/api/routes.py`)
+## 4. Evidence Media Export & Multi-Cut Video Compilation (`evidence ± N` Clip, Annotated Frame Image & Combined Video of Cuts)
+
+To allow bank auditors and security officers to package visual proof directly from the Web UI without external video editors, we implemented **3 Evidence Export & Compilation modes**:
+
+1. **Export Evidence Frame as High-Resolution Image (`GET /api/v1/jobs/{job_id}/evidence/frame`):**
+   - Downloads the exact violation frame (or any selected keyframe `T-1s`, `T`, `T+1s`) as a standalone `.jpg` image (`evidence_{job_id}_v1_{T}s.jpg`).
+   - Supports optional burned-in **`evidence_bbox` targeting rectangle** + timestamp header (`draw_bbox=true` or clean raw frame `draw_bbox=false`).
+2. **Export Single Evidence $\pm N$ Seconds/Frames as Video Clip (`GET /api/v1/jobs/{job_id}/evidence/clip`):**
+   - Extracts a configurable window **`[timecode_sec - N, timecode_sec + N]`** (e.g., $\pm 3\text{s}$, $\pm 5\text{s}$, or custom `pad_sec`) around a single violation and exports it as a downloadable `.mp4` video clip with the optional bounding rectangle highlighted around the violation peak.
+3. **Multi-Evidence Selection & Single Combined Video of Cuts (`POST /api/v1/jobs/{job_id}/evidence/compile`):**
+   - In the Web UI, the user can select **multiple violation timelines / evidence intervals** (via checkboxes on violation cards or custom `[start_sec, end_sec]` cuts) and click **"Compile Selected Cuts into One Video"**.
+   - The backend slices each selected interval `[T_i - N, T_i + N]`, stamps a clean top-left cut badge (`CUT #1 | 12.0s`, `CUT #2 | 22.0s`), draws the optional evidence bounding rectangle (`bbox_norm`), and **concatenates all selected segments into a single `.mp4` video of cuts** (`compiled_evidence_{job_id}_{K}cuts.mp4`).
+
+---
+
+## 5. FastAPI REST API Endpoints (`backend/app/api/routes.py`)
 
 ### Authentication
 All protected endpoints require the `X-API-Key` header (configured via `API_KEY` in `.env`). Missing or invalid keys return `401 Unauthorized`.
@@ -92,12 +107,15 @@ All protected endpoints require the `X-API-Key` header (configured via `API_KEY`
 | `POST` | `/api/v1/videos/inspect` | `X-API-Key` | **Video Inspector:** Returns `duration_sec`, `fps`, `width`, `height`, and 3 base64 preview thumbnails for UI timeline trimming. |
 | `POST` | `/api/v1/videos/trim` | `X-API-Key` | **Standalone Video Trimmer:** Physically trims an uploaded video to `[start_sec, end_sec]` and optionally starts an analysis job. |
 | `GET` | `/api/v1/videos/{job_id}/stream` | Public | **Video Streamer:** Streams the `.mov`/`.mp4` video file for a job so the Web UI video player can play `T - 5s → T` and render the evidence rectangle. |
+| `GET` | `/api/v1/jobs/{job_id}/evidence/frame` | Public | **Evidence Frame Image Export:** Downloads the violation frame at `timestamp_sec` as a `.jpg` image (with optional burned-in `evidence_bbox` rectangle). |
+| `GET` | `/api/v1/jobs/{job_id}/evidence/clip` | Public | **Evidence $\pm N$ Sec Video Clip Export:** Exports `[timecode_sec - pad_sec, timecode_sec + pad_sec]` as a standalone `.mp4` clip. |
+| `POST` | `/api/v1/jobs/{job_id}/evidence/compile` | Public | **Multi-Evidence Combined Video of Cuts:** Stitches multiple selected violation timelines (`violation_indices` or custom `[start_sec, end_sec]` cuts) into one consolidated `.mp4` video. |
 | `GET` | `/api/v1/regulations` | Public | **Legal Knowledge Base:** Lists all 16 seeded RK banking regulations (`adilet.zan.kz`) from PostgreSQL `rk_banking_regulations`. |
 | `GET` | `/api/v1/health` | Public | **Healthcheck:** Verifies local YOLO models, embedding model, and PostgreSQL + `pgvector` database connectivity. |
 
 ---
 
-## 5. Database & Persistence Features (`backend/app/db/repository.py`)
+## 6. Database & Persistence Features (`backend/app/db/repository.py`)
 
 - **`rk_banking_regulations` (`pgvector` `vector(384)`):** Stores 16 curated National Bank of RK clauses with IVFFlat cosine similarity index.
 - **`analysis_jobs` (`JSONB`):** Persists every job's lifecycle (`processing` $\rightarrow$ `done` / `failed`), `verdict`, `processing_time_sec`, and full `result_json` (including `evidence_bbox` and `replay_window`).
@@ -106,7 +124,7 @@ All protected endpoints require the `X-API-Key` header (configured via `API_KEY`
 
 ---
 
-## 6. One-Command Setup & Utility Scripts (`scripts/`)
+## 7. One-Command Setup & Utility Scripts (`scripts/`)
 
 | Script | Purpose |
 | :--- | :--- |
