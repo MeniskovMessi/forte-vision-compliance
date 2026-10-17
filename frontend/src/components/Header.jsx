@@ -1,7 +1,7 @@
 import React from 'react'
-import { Sun, Moon, Play } from 'lucide-react'
+import { Sun, Moon, Play, BookOpen } from 'lucide-react'
 
-export default function Header({ darkMode, onToggleTheme, onReplayIntro }) {
+export default function Header({ darkMode, onToggleTheme, onReplayIntro, onOpenRegulations }) {
   return (
     <header className="shrink-0 z-40 border-b border-gray-200/40 dark:border-[#1A1E26] bg-white dark:bg-[#0D0F12] transition-colors">
       <div className="w-full px-4 sm:px-6 h-12 flex items-center justify-between">
@@ -18,6 +18,16 @@ export default function Header({ darkMode, onToggleTheme, onReplayIntro }) {
 
         {/* Right Actions */}
         <div className="flex items-center space-x-1.5 sm:space-x-2">
+          {/* RK Regulations Button */}
+          <button
+            onClick={onOpenRegulations}
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1C2028] hover:text-gray-900 dark:hover:text-white transition"
+            title="Нормативная база регламентов НБРК (Республика Казахстан)"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-[#9D1D53]" />
+            <span>Регламенты РК</span>
+          </button>
+
           {/* Replay Screensaver */}
           <button
             onClick={onReplayIntro}

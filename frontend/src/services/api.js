@@ -64,3 +64,12 @@ export async function compileVideoCuts(file, cuts, drawBbox = true) {
   }
   return res.blob()
 }
+
+export async function fetchRegulations() {
+  const res = await fetch(`${API_BASE}/regulations`, {
+    headers: authHeaders,
+  })
+  if (!res.ok) throw new Error(`Failed to load regulations: ${res.statusText}`)
+  return res.json()
+}
+
