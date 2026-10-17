@@ -232,12 +232,10 @@ export default function Timeline({
                 }}
                 onMouseLeave={() => setHoveredDetection(null)}
                 style={{ left: `${leftPct}%` }}
-                className="absolute top-2 bottom-[-6px] -translate-x-1/2 z-20 w-3 flex flex-col items-center cursor-pointer group/det"
+                className="absolute top-1 bottom-[-4px] -translate-x-1/2 z-20 w-3 flex flex-col items-center cursor-pointer group/det"
               >
-                {/* Blue top pin */}
-                <div className="w-2.5 h-2.5 rounded-sm bg-sky-400 dark:bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.9)] transform transition-transform group-hover/det:scale-125" />
-                {/* Blue vertical line crossing through the timeline */}
-                <div className="w-[3px] flex-1 bg-sky-400 dark:bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+                {/* Clean vertical blue detection line */}
+                <div className="w-[2.5px] group-hover/det:w-[3.5px] h-full bg-sky-400 dark:bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.9)] rounded-full transition-all" />
               </div>
             )
           })}
