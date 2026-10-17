@@ -262,17 +262,8 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
             onPause={() => setIsPlaying(false)}
             onEnded={() => setIsPlaying(false)}
             playsInline
-            className="max-h-full max-w-full object-contain rounded shadow-2xl pointer-events-none"
+            className="max-h-full max-w-full object-contain rounded pointer-events-none"
           />
-
-          {/* Big Play Overlay Icon when paused */}
-          {!isPlaying && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/25 backdrop-blur-[1px]">
-              <div className="w-12 h-12 rounded-full bg-[#9D1D53]/90 text-white flex items-center justify-center shadow-xl pl-0.5 group-hover:scale-110 transition-transform">
-                <Film className="w-5 h-5" />
-              </div>
-            </div>
-          )}
 
           {/* Quick resolution badge */}
           {videoResolution && (

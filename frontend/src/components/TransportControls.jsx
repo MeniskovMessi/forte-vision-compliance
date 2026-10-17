@@ -4,8 +4,6 @@ import {
   Pause,
   SkipBack,
   SkipForward,
-  ChevronLeft,
-  ChevronRight,
   Gauge,
 } from 'lucide-react'
 
@@ -59,31 +57,21 @@ export default function TransportControls({
         )}
       </div>
 
-      {/* Center: Play/Pause and Step Buttons (Matching User Request) */}
-      <div className="flex items-center space-x-1 sm:space-x-1.5">
-        {/* Jump to Beginning */}
+      {/* Center: Play/Pause and Move Left/Right Buttons */}
+      <div className="flex items-center space-x-1.5">
+        {/* Move Left Button: Move between detected lines or to the beginning */}
         <button
-          onClick={onJumpToStart}
-          className="p-1.5 sm:p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1E232B] hover:text-gray-900 dark:hover:text-white transition"
-          title="В начало видео (00:00)"
+          onClick={onPrevCheckpoint}
+          className="p-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1E232B] hover:text-gray-900 dark:hover:text-white transition active:scale-95"
+          title="Перейти к предыдущему нарушению или в начало (Стрелка влево)"
         >
           <SkipBack className="w-4 h-4" />
         </button>
 
-        {/* Move Left to Previous Checkpoint (or start) */}
-        <button
-          onClick={onPrevCheckpoint}
-          className="flex items-center space-x-0.5 px-2 py-1.5 sm:py-2 rounded-md text-xs font-mono text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1E232B] transition border border-transparent hover:border-gray-200 dark:hover:border-[#2A313D]"
-          title="Предыдущее нарушение / контрольная точка"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          <span className="hidden md:inline text-[11px]">Назад</span>
-        </button>
-
-        {/* Big Main Play/Pause Button */}
+        {/* Play/Pause Button (Flat Linear style) */}
         <button
           onClick={onTogglePlay}
-          className="mx-1 px-4 py-2 rounded-lg bg-[#9D1D53] hover:bg-[#861846] text-white shadow-sm flex items-center justify-center transition-transform active:scale-95"
+          className="w-9 h-9 rounded-md bg-[#9D1D53] hover:bg-[#861846] text-white flex items-center justify-center transition active:scale-95"
           title={isPlaying ? 'Пауза (Пробел)' : 'Воспроизведение (Пробел)'}
         >
           {isPlaying ? (
@@ -93,21 +81,11 @@ export default function TransportControls({
           )}
         </button>
 
-        {/* Move Right to Next Checkpoint (or end) */}
+        {/* Move Right Button: Move between detected lines or to the end */}
         <button
           onClick={onNextCheckpoint}
-          className="flex items-center space-x-0.5 px-2 py-1.5 sm:py-2 rounded-md text-xs font-mono text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#1E232B] transition border border-transparent hover:border-gray-200 dark:hover:border-[#2A313D]"
-          title="Следующее нарушение / контрольная точка"
-        >
-          <span className="hidden md:inline text-[11px]">Вперёд</span>
-          <ChevronRight className="w-4 h-4" />
-        </button>
-
-        {/* Jump to End */}
-        <button
-          onClick={onJumpToEnd}
-          className="p-1.5 sm:p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1E232B] hover:text-gray-900 dark:hover:text-white transition"
-          title="В конец видео"
+          className="p-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1E232B] hover:text-gray-900 dark:hover:text-white transition active:scale-95"
+          title="Перейти к следующему нарушению или в конец (Стрелка вправо)"
         >
           <SkipForward className="w-4 h-4" />
         </button>
