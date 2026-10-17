@@ -25,7 +25,7 @@ export default function App() {
   // Uploaded video state
   const [uploadedVideo, setUploadedVideo] = useState(null)
 
-  // RK Regulations modal state
+  // Regulations modal state
   const [showRegulationsModal, setShowRegulationsModal] = useState(false)
 
   // Persist theme to localStorage and sync 'dark' class on html
@@ -80,7 +80,7 @@ export default function App() {
         }}
         className="flex-1 min-h-0 flex flex-col overflow-hidden"
       >
-        {/* Main Header */}
+        {/* Main Header with RK Regulations Button */}
         <Header
           darkMode={darkMode}
           onToggleTheme={toggleTheme}
@@ -112,7 +112,7 @@ export default function App() {
         )}
       </div>
 
-      {/* RK Regulations Explorer Modal */}
+      {/* Regulations Modal (Republic of Kazakhstan Banking Regulations) */}
       <RegulationsModal
         isOpen={showRegulationsModal}
         onClose={() => setShowRegulationsModal(false)}
