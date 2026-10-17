@@ -36,21 +36,14 @@ export default function HistoryDrawer({ isOpen, onClose, onSelectJob }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end">
-      <div className="w-full max-w-md h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col">
+      <div className="w-full max-w-sm h-full bg-white dark:bg-[#12151B] border-l border-gray-200 dark:border-[#22272E] shadow-xl flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                Журнал Аудитов
-              </h3>
-              <p className="text-xs text-slate-500 font-mono">
-                История видеоанализов в PostgreSQL
-              </p>
-            </div>
+        <div className="p-4 border-b border-gray-200 dark:border-[#22272E] flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Clock className="w-4 h-4 text-[#9D1D53]" />
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Журнал проверок
+            </h3>
           </div>
           <div className="flex items-center space-x-1">
             <button

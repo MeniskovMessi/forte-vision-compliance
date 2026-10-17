@@ -1,14 +1,5 @@
 import React, { useState } from 'react'
-import {
-  Download,
-  Film,
-  Image as ImageIcon,
-  Layers,
-  Scissors,
-  CheckCircle2,
-  RefreshCw,
-  ExternalLink,
-} from 'lucide-react'
+import { Download, Film, Image as ImageIcon, Scissors, CheckCircle2, RefreshCw } from 'lucide-react'
 import {
   getEvidenceFrameUrl,
   getEvidenceClipUrl,
@@ -45,78 +36,65 @@ export default function ExportStudio({
       })
       setCompiledResult(res)
     } catch (err) {
-      setCompileError(err.message || 'Ошибка компиляции видео')
+      setCompileError(err.message || 'Ошибка компиляции')
     } finally {
       setIsCompiling(false)
     }
   }
 
   return (
-    <div className="bg-white dark:bg-[#111625] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-5">
-      <div className="flex items-center space-x-2.5">
-        <div className="p-2 rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
-          <Layers className="w-5 h-5" />
-        </div>
-        <div>
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-            Студия Экспорта Доказательств и Нарезок
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Выгрузка кадров, отдельных клипов ±N сек и объединение выбранных таймлайнов в единое видео
-          </p>
-        </div>
-      </div>
+    <div className="bg-white dark:bg-[#16191E] rounded-xl border border-gray-200 dark:border-[#22272E] p-4 shadow-sm space-y-3.5 text-xs">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-gray-900 dark:text-white">
+          Экспорт материалов инцидента
+        </h3>
 
-      {/* Global export settings */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 text-xs font-mono">
-        <label className="flex items-center space-x-2 text-slate-700 dark:text-slate-300 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={includeBbox}
-            onChange={(e) => setIncludeBbox(e.target.checked)}
-            className="rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
-          />
-          <span>Вжигать рамку AI-таргета (evidence_bbox) в экспортируемое медиа</span>
-        </label>
+        <div className="flex items-center space-x-3 font-mono text-[11px] text-gray-500">
+          <label className="flex items-center space-x-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeBbox}
+              onChange={(e) => setIncludeBbox(e.target.checked)}
+              className="rounded text-[#9D1D53] focus:ring-0 cursor-pointer"
+            />
+            <span>Наложить рамку</span>
+          </label>
 
-        <div className="flex items-center space-x-2">
-          <span className="text-slate-500">Окно клипа:</span>
-          <select
-            value={clipPadSec}
-            onChange={(e) => setClipPadSec(parseFloat(e.target.value))}
-            className="px-2 py-1 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 cursor-pointer"
-          >
-            <option value="2.0">±2.0 сек</option>
-            <option value="3.0">±3.0 сек (по умолч.)</option>
-            <option value="5.0">±5.0 сек</option>
-            <option value="8.0">±8.0 сек</option>
-          </select>
+          <div className="flex items-center space-x-1">
+            <span>Клип:</span>
+            <select
+              value={clipPadSec}
+              onChange={(e) => setClipPadSec(parseFloat(e.target.value))}
+              className="px-1.5 py-0.5 rounded bg-gray-50 dark:bg-[#0E1015] border border-gray-200 dark:border-[#22272E]"
+            >
+              <option value="2.0">±2с</option>
+              <option value="3.0">±3с</option>
+              <option value="5.0">±5с</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Section 1: Single Evidence Quick Export */}
-        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center space-x-2 text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-mono">
-              <Scissors className="w-3.5 h-3.5 text-rose-600" />
-              <span>Экспорт выбранного инцидента ({tc}с)</span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Скачайте доказательство конкретного нарушения в один клик:
-            </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Single Item Export */}
+        <div className="p-3 rounded-lg border border-gray-200 dark:border-[#22272E] bg-gray-50/50 dark:bg-[#0E1015]/60 flex items-center justify-between">
+          <div className="pr-2">
+            <span className="block font-medium text-gray-800 dark:text-gray-200 font-mono text-[11px]">
+              Инцидент ({tc}с)
+            </span>
+            <span className="text-[10px] text-gray-400">Экспорт кадра или фрагмента</span>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 pt-2">
+          <div className="flex items-center space-x-1.5">
             <a
               href={getEvidenceFrameUrl(jobId, tc, includeBbox)}
               download={`evidence_${jobId}_${tc}s.jpg`}
               target="_blank"
               rel="noreferrer"
-              className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition"
+              className="flex items-center space-x-1 px-2.5 py-1.5 rounded bg-white dark:bg-[#16191E] border border-gray-200 dark:border-[#22272E] hover:bg-gray-100 text-gray-700 dark:text-gray-200 text-xs transition"
             >
-              <ImageIcon className="w-3.5 h-3.5 text-rose-600" />
-              <span>Кадр .JPG ({tc}с)</span>
+              <ImageIcon className="w-3 h-3 text-[#9D1D53]" />
+              <span>.JPG</span>
             </a>
 
             <a
@@ -124,110 +102,73 @@ export default function ExportStudio({
               download={`clip_${jobId}_${tc}s.mp4`}
               target="_blank"
               rel="noreferrer"
-              className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition"
+              className="flex items-center space-x-1 px-2.5 py-1.5 rounded bg-white dark:bg-[#16191E] border border-gray-200 dark:border-[#22272E] hover:bg-gray-100 text-gray-700 dark:text-gray-200 text-xs transition"
             >
-              <Film className="w-3.5 h-3.5 text-rose-600" />
-              <span>Клип .MP4 (±{clipPadSec}с)</span>
+              <Film className="w-3 h-3 text-[#9D1D53]" />
+              <span>.MP4</span>
             </a>
           </div>
         </div>
 
-        {/* Section 2: Multi-Evidence Compilation */}
-        <div className="p-4 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/20 dark:bg-rose-950/10 space-y-3 flex flex-col justify-between">
+        {/* Multi-cut compilation */}
+        <div className="p-3 rounded-lg border border-gray-200 dark:border-[#22272E] bg-gray-50/50 dark:bg-[#0E1015]/60 flex items-center justify-between">
           <div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-xs font-semibold uppercase tracking-wider text-rose-800 dark:text-rose-300 font-mono">
-                <Film className="w-3.5 h-3.5 text-rose-600" />
-                <span>Объединенное видео нарезок</span>
-              </div>
-              <div className="flex items-center space-x-2 text-[11px] font-mono text-slate-500">
-                <button
-                  onClick={onSelectAllForCompile}
-                  className="hover:underline text-rose-600 dark:text-rose-400"
-                >
-                  Все ({violations.length})
-                </button>
-                <span>•</span>
-                <button onClick={onClearCompileSelection} className="hover:underline">
-                  Снять
-                </button>
-              </div>
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-              Выбрано инцидентов для склейки:{' '}
-              <span className="font-bold text-rose-600 dark:text-rose-400 font-mono">
-                {selectedForCompile.length} из {violations.length}
+            <div className="flex items-center space-x-2">
+              <span className="font-medium text-gray-800 dark:text-gray-200 font-mono text-[11px]">
+                Склейка ({selectedForCompile.length} из {violations.length})
               </span>
-            </p>
+              <button
+                onClick={onSelectAllForCompile}
+                className="text-[10px] text-[#9D1D53] hover:underline"
+              >
+                Все
+              </button>
+            </div>
+            <span className="text-[10px] text-gray-400">Объединение всех нарезок в 1 файл</span>
           </div>
 
-          <div className="pt-2">
-            <button
-              onClick={handleCompile}
-              disabled={isCompiling || selectedForCompile.length === 0}
-              className={`w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-xl text-xs font-medium text-white shadow-sm transition ${
-                isCompiling || selectedForCompile.length === 0
-                  ? 'bg-rose-400 cursor-not-allowed'
-                  : 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20'
-              }`}
-            >
-              {isCompiling ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Склейка выбранных интервалов...</span>
-                </>
-              ) : (
-                <>
-                  <Download className="w-3.5 h-3.5" />
-                  <span>
-                    Скомпилировать выбранные нарезки ({selectedForCompile.length}) в одно видео
-                  </span>
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            onClick={handleCompile}
+            disabled={isCompiling || selectedForCompile.length === 0}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-medium text-white transition ${
+              isCompiling || selectedForCompile.length === 0
+                ? 'bg-gray-400 dark:bg-gray-700 cursor-not-allowed'
+                : 'bg-[#9D1D53] hover:bg-[#831644]'
+            }`}
+          >
+            {isCompiling ? (
+              <RefreshCw className="w-3 h-3 animate-spin" />
+            ) : (
+              <Scissors className="w-3 h-3" />
+            )}
+            <span>Объединить</span>
+          </button>
         </div>
       </div>
 
-      {/* Compilation Result Banner & Preview Player */}
+      {/* Compiled video preview */}
       {compiledResult && (
-        <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center space-x-2 text-xs font-semibold text-emerald-800 dark:text-emerald-300 font-mono">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>
-                Видео успешно скомпилировано! Нарезок: {compiledResult.cuts_count} •
-                Длительность: {compiledResult.total_duration_sec}с
-              </span>
-            </div>
-            {compiledResult.download_url && (
-              <a
-                href={compiledResult.download_url}
-                download={compiledResult.filename || 'compiled_evidence.mp4'}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Скачать итоговое видео (.mp4)</span>
-              </a>
-            )}
+        <div className="p-3 rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center space-x-2 text-emerald-800 dark:text-emerald-300 font-mono text-[11px]">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>
+              Склеено нарезок: {compiledResult.cuts_count} • Длительность: {compiledResult.total_duration_sec}с
+            </span>
           </div>
-
-          {/* Inline Video Player Preview of the compiled cuts */}
           {compiledResult.download_url && (
-            <div className="rounded-xl overflow-hidden bg-black max-w-lg mx-auto aspect-video">
-              <video
-                src={compiledResult.download_url}
-                controls
-                className="w-full h-full object-contain"
-              />
-            </div>
+            <a
+              href={compiledResult.download_url}
+              download={compiledResult.filename || 'compiled_evidence.mp4'}
+              className="flex items-center space-x-1.5 px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 text-xs transition"
+            >
+              <Download className="w-3 h-3" />
+              <span>Скачать .MP4</span>
+            </a>
           )}
         </div>
       )}
 
-      {compileError && (
-        <p className="text-xs text-rose-600 dark:text-rose-400 font-mono">{compileError}</p>
-      )}
+      {compileError && <p className="text-xs text-rose-600 font-mono">{compileError}</p>}
     </div>
   )
 }

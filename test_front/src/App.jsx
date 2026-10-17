@@ -165,7 +165,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#090D16] text-slate-900 dark:text-slate-100 transition-colors flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F9FAFB] dark:bg-[#0D0F12] text-[#111827] dark:text-[#EDEDEF] transition-colors flex flex-col font-sans">
       {/* 1-Second Screensaver Overlay */}
       {showScreensaver && (
         <Screensaver
@@ -186,7 +186,7 @@ export default function App() {
       />
 
       {/* Main Workspace Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 sm:py-6 space-y-5">
         {/* Upload & Range Trimmer Section */}
         <VideoUploaderAndTrimmer
           onAnalyze={handleAnalyze}
@@ -199,24 +199,24 @@ export default function App() {
 
         {/* Error Alert */}
         {analysisError && (
-          <div className="p-4 rounded-xl border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 flex items-center space-x-2 text-xs font-mono">
+          <div className="p-3.5 rounded-lg border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 flex items-center space-x-2 text-xs font-mono">
             <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
             <span>{analysisError}</span>
           </div>
         )}
 
-        {/* Video Player & Violation Inspector Workspace (Rendered when video is ready or analysis done) */}
+        {/* Video Player & Violation Inspector Workspace */}
         {(videoSrc || jobData) && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
             {/* Left 7 Columns: CCTV Cinema Player */}
-            <div className="lg:col-span-7 space-y-4">
+            <div className="lg:col-span-7 space-y-3.5">
               <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  CCTV Видеоплеер с T-5с авто-повтором
+                <span className="text-xs font-mono text-gray-500 uppercase tracking-wider">
+                  Видеоплеер
                 </span>
                 {selectedViolation && (
-                  <span className="text-[11px] font-mono text-rose-600 dark:text-rose-400">
-                    Таргет: #{selectedViolation.relative_timecode_sec ?? selectedViolation.timecode_sec}с
+                  <span className="text-[11px] font-mono text-[#9D1D53]">
+                    Фрагмент #{selectedViolation.relative_timecode_sec ?? selectedViolation.timecode_sec}с
                   </span>
                 )}
               </div>
@@ -243,7 +243,7 @@ export default function App() {
             </div>
 
             {/* Right 5 Columns: Verdict & Legal Violation Inspector */}
-            <div className="lg:col-span-5 space-y-4">
+            <div className="lg:col-span-5 space-y-3.5">
               <ViolationInspector
                 jobData={jobData}
                 selectedViolation={selectedViolation}
@@ -258,11 +258,8 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800/80 py-4 px-6 text-center text-xs font-mono text-slate-500 dark:text-slate-400 mt-12">
-        <p>
-          PRISM • ForteBank AI Vision Compliance Platform • 100% Local Execution • NBRK Regulations
-          (adilet.zan.kz)
-        </p>
+      <footer className="border-t border-gray-200 dark:border-[#22272E] py-3 px-6 text-center text-xs font-mono text-gray-400 mt-10">
+        <p>PRISM • ForteBank Кассовый аудит • Нормативная база НБРК (adilet.zan.kz)</p>
       </footer>
 
       {/* Modals */}

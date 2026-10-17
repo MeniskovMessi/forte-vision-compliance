@@ -1,16 +1,13 @@
 import React, { useState } from 'react'
 import {
-  AlertTriangle,
+  AlertCircle,
   CheckCircle2,
   Play,
   ExternalLink,
-  ShieldAlert,
   Scale,
-  Image as ImageIcon,
   CheckSquare,
   Square,
   ZoomIn,
-  Sparkles,
 } from 'lucide-react'
 
 export default function ViolationInspector({
@@ -29,64 +26,52 @@ export default function ViolationInspector({
   const violations = jobData.violations || []
 
   return (
-    <div className="space-y-4">
-      {/* Big Bold Verdict Banner */}
+    <div className="space-y-3">
+      {/* Clean Linear Verdict Banner */}
       <div
-        className={`p-5 rounded-2xl border transition-all ${
+        className={`px-4 py-3 rounded-lg border transition ${
           isViolation
-            ? 'bg-rose-50/70 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/50'
-            : 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/50'
+            ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40'
+            : 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40'
         }`}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center space-x-3">
-            <div
-              className={`p-3 rounded-xl ${
-                isViolation
-                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20'
-                  : 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-              }`}
-            >
-              {isViolation ? <AlertTriangle className="w-6 h-6" /> : <CheckCircle2 className="w-6 h-6" />}
-            </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2.5">
+            {isViolation ? (
+              <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+            )}
             <div>
-              <div className="flex items-center space-x-2">
-                <h3
-                  className={`text-base font-bold tracking-tight uppercase ${
-                    isViolation ? 'text-rose-950 dark:text-rose-200' : 'text-emerald-950 dark:text-emerald-200'
-                  }`}
-                >
-                  {isViolation
-                    ? 'Обнаружены признаки нарушений кассовой дисциплины'
-                    : 'Нарушений кассовой дисциплины не выявлено'}
-                </h3>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 font-mono mt-0.5">
+              <h3
+                className={`text-xs font-semibold uppercase tracking-wider ${
+                  isViolation
+                    ? 'text-rose-900 dark:text-rose-200'
+                    : 'text-emerald-900 dark:text-emerald-200'
+                }`}
+              >
+                {isViolation ? 'Зафиксированы нарушения' : 'Нарушений не обнаружено'}
+              </h3>
+              <p className="text-[11px] text-gray-500 font-mono mt-0.5">
                 {isViolation
-                  ? `Зафиксировано инцидентов: ${violations.length} • Время обработки: ${jobData.processing_time_sec || 0}с`
-                  : `Все кассовые регламенты НБРК соблюдены • Время обработки: ${jobData.processing_time_sec || 0}с`}
+                  ? `Инцидентов: ${violations.length} • Время обработки: ${jobData.processing_time_sec || 0}с`
+                  : `Все регламенты НБРК соблюдены • Время обработки: ${jobData.processing_time_sec || 0}с`}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 text-xs font-mono">
-            <span className="px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
-              {jobData.video_metadata?.layout === 'B_left_laptop' ? 'Макет B (Ноутбук слева)' : 'Макет A (Ноутбук справа)'}
-            </span>
-          </div>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white dark:bg-[#16191E] border border-gray-200 dark:border-[#22272E] text-gray-600 dark:text-gray-300">
+            {jobData.video_metadata?.layout === 'B_left_laptop' ? 'Макет B' : 'Макет A'}
+          </span>
         </div>
       </div>
 
-      {/* Violation Cards List */}
+      {/* Violations List */}
       {violations.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-mono">
-              Список выявленных инцидентов ({violations.length})
-            </h4>
-            <span className="text-[11px] text-slate-400 font-mono">
-              Нажмите карточку для воспроизведения с T-5с
-            </span>
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between px-1 text-[11px] font-mono text-gray-400">
+            <span>Список нарушений ({violations.length})</span>
+            <span>Клик для повтора с T-5с</span>
           </div>
 
           {violations.map((v, idx) => {
@@ -99,111 +84,95 @@ export default function ViolationInspector({
               <div
                 key={idx}
                 onClick={() => onSelectViolation(v)}
-                className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer relative ${
+                className={`p-3.5 sm:p-4 rounded-xl border transition cursor-pointer text-xs ${
                   isSelected
-                    ? 'bg-white dark:bg-slate-800/90 border-rose-500 shadow-md ring-1 ring-rose-500/30'
-                    : 'bg-white dark:bg-[#111625] border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    ? 'bg-white dark:bg-[#16191E] border-rose-500 shadow-sm'
+                    : 'bg-white dark:bg-[#16191E] border-gray-200 dark:border-[#22272E] hover:border-gray-300 dark:hover:border-gray-700'
                 }`}
               >
-                {/* Header row: Title + Timecode + Actions */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start space-x-3">
-                    {/* Multi-cut compilation checkbox */}
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start space-x-2">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation()
                         onToggleCompileSelection(idx)
                       }}
-                      className="mt-0.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"
-                      title="Выбрать для объединенного видео нарезки"
+                      className="mt-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                      title="Выбрать для объединенного видео"
                     >
                       {isMarkedForCompile ? (
-                        <CheckSquare className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                        <CheckSquare className="w-4 h-4 text-[#9D1D53]" />
                       ) : (
-                        <Square className="w-5 h-5 text-slate-300 dark:text-slate-600" />
+                        <Square className="w-4 h-4" />
                       )}
                     </button>
-
                     <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-sm text-slate-900 dark:text-white">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-semibold text-gray-900 dark:text-white">
                           #{idx + 1}. {v.type}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 font-semibold border border-rose-200 dark:border-rose-900/50">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                           {Math.floor(tc / 60)
                             .toString()
                             .padStart(2, '0')}
                           :{(tc % 60).toString().padStart(2, '0')} ({tc}с)
                         </span>
-                        {v.confidence && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                            Уверенность: {Math.round(v.confidence * 100)}%
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Play T-5s button */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       onSelectViolation(v)
                       onTriggerReplay()
                     }}
-                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-mono bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition whitespace-nowrap shadow-sm"
+                    className="flex items-center space-x-1 px-2 py-1 rounded text-[11px] font-mono bg-gray-100 hover:bg-gray-200 dark:bg-[#22272E] dark:hover:bg-[#2A313C] text-gray-700 dark:text-gray-200 transition"
                   >
-                    <Play className="w-3 h-3 fill-rose-600 text-rose-600" />
-                    <span>T-5с Повтор</span>
+                    <Play className="w-3 h-3 fill-gray-600 dark:fill-gray-300" />
+                    <span>T-5с</span>
                   </button>
                 </div>
 
                 {/* Description */}
-                <p className="mt-2.5 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                <p className="mt-2 text-gray-600 dark:text-gray-300 leading-relaxed text-xs">
                   {v.description}
                 </p>
 
-                {/* Legal Grounding Box (Republic of Kazakhstan NBRK Regulations) */}
+                {/* Legal Citation */}
                 {reg.doc_title && (
-                  <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 space-y-1.5 text-xs">
+                  <div className="mt-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-[#0E1015] border border-gray-200 dark:border-[#22272E] text-[11px] space-y-1">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-1.5 text-slate-800 dark:text-slate-200 font-semibold">
-                        <Scale className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                        <span>Правовое основание РК ({reg.clause_ref})</span>
-                      </div>
+                      <span className="font-medium text-gray-800 dark:text-gray-200">
+                        Основание: {reg.clause_ref}
+                      </span>
                       {reg.adilet_url && (
                         <a
                           href={reg.adilet_url}
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="flex items-center space-x-1 text-[11px] text-rose-600 dark:text-rose-400 hover:underline font-mono"
+                          className="flex items-center space-x-1 text-[#9D1D53] hover:underline font-mono"
                         >
                           <span>adilet.zan.kz</span>
-                          <ExternalLink className="w-3 h-3" />
+                          <ExternalLink className="w-2.5 h-2.5" />
                         </a>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono leading-tight">
-                      {reg.doc_title}
-                    </p>
                     {reg.normative_text && (
-                      <blockquote className="text-[11px] italic text-slate-600 dark:text-slate-300 border-l-2 border-rose-500/60 pl-2 mt-1">
+                      <blockquote className="italic text-gray-500 dark:text-gray-400 border-l border-gray-300 dark:border-gray-700 pl-2">
                         «{reg.normative_text}»
                       </blockquote>
                     )}
                   </div>
                 )}
 
-                {/* 3-Keyframe Evidence Gallery Strip */}
+                {/* 3 Evidence Frames */}
                 {v.evidence_frames && v.evidence_frames.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center space-x-2 text-[11px] font-mono text-slate-400 mb-2">
-                      <ImageIcon className="w-3 h-3" />
-                      <span>Кадры видеодоказательства (T-1с, T, T+1с):</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
+                  <div className="mt-2.5 pt-2 border-t border-gray-100 dark:border-[#22272E]">
+                    <div className="grid grid-cols-3 gap-1.5">
                       {v.evidence_frames.map((ef, efIdx) => {
                         const imgB64 = ef.image_base64?.startsWith('data:')
                           ? ef.image_base64
@@ -219,7 +188,7 @@ export default function ViolationInspector({
                                 label: v.type,
                               })
                             }}
-                            className="relative group rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 aspect-video bg-black cursor-pointer hover:ring-2 hover:ring-rose-500 transition"
+                            className="relative group rounded overflow-hidden border border-gray-200 dark:border-[#22272E] aspect-video bg-black cursor-pointer"
                           >
                             <img
                               src={imgB64}
@@ -227,9 +196,9 @@ export default function ViolationInspector({
                               className="w-full h-full object-cover"
                             />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white">
-                              <ZoomIn className="w-5 h-5" />
+                              <ZoomIn className="w-4 h-4" />
                             </div>
-                            <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-[9px] font-mono">
+                            <span className="absolute bottom-1 right-1 px-1 py-0.5 rounded bg-black/70 text-white text-[9px] font-mono">
                               {ef.timestamp_sec}с
                             </span>
                           </div>
@@ -244,26 +213,23 @@ export default function ViolationInspector({
         </div>
       )}
 
-      {/* Enlarged Image Modal */}
+      {/* Enlarged Modal */}
       {modalImage && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setModalImage(null)}
         >
           <div
-            className="max-w-3xl w-full bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800"
+            className="max-w-3xl w-full bg-white dark:bg-[#16191E] rounded-xl overflow-hidden shadow-2xl border border-gray-200 dark:border-[#22272E]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Кадр видеодоказательства ({modalImage.timestamp}с)
-                </p>
-                <p className="text-xs text-slate-500 font-mono">{modalImage.label}</p>
-              </div>
+            <div className="p-3 border-b border-gray-200 dark:border-[#22272E] flex items-center justify-between text-xs">
+              <span className="font-medium text-gray-900 dark:text-white">
+                Кадр доказательства ({modalImage.timestamp}с) — {modalImage.label}
+              </span>
               <button
                 onClick={() => setModalImage(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-mono px-2 py-1"
+                className="text-gray-400 hover:text-gray-600 font-mono"
               >
                 Закрыть [ESC]
               </button>
@@ -271,7 +237,7 @@ export default function ViolationInspector({
             <div className="p-2 bg-black flex items-center justify-center">
               <img
                 src={modalImage.src}
-                alt="Enlarged evidence"
+                alt="Enlarged"
                 className="max-h-[75vh] w-auto object-contain rounded"
               />
             </div>

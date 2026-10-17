@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { UploadCloud, Scissors, Play, AlertCircle, FileVideo, CheckCircle2, RefreshCw } from 'lucide-react'
+import { UploadCloud, Scissors, Play, FileVideo, RefreshCw } from 'lucide-react'
 import { inspectVideoFile } from '../services/api'
 
 export default function VideoUploaderAndTrimmer({
@@ -11,7 +11,6 @@ export default function VideoUploaderAndTrimmer({
   setVideoMetadata,
 }) {
   const [isDragging, setIsDragging] = useState(false)
-  const [isInspecting, setIsInspecting] = useState(false)
   const [enableTrimming, setEnableTrimming] = useState(false)
   const [startSec, setStartSec] = useState(0)
   const [endSec, setEndSec] = useState(0)
@@ -21,7 +20,6 @@ export default function VideoUploaderAndTrimmer({
   const handleFileChange = async (file) => {
     if (!file) return
     setCurrentFile(file)
-    setIsInspecting(true)
 
     try {
       const info = await inspectVideoFile(file)
@@ -29,8 +27,7 @@ export default function VideoUploaderAndTrimmer({
       setStartSec(0)
       setEndSec(info.duration_sec ? Math.round(info.duration_sec * 10) / 10 : 30)
     } catch (err) {
-      console.warn('Backend inspect fallback to local metadata:', err)
-      // Fallback: extract duration locally via temporary HTML video element
+      // Local fallback
       const tempVideo = document.createElement('video')
       tempVideo.preload = 'metadata'
       tempVideo.onloadedmetadata = () => {
@@ -42,14 +39,11 @@ export default function VideoUploaderAndTrimmer({
           fps: 30,
           width: tempVideo.videoWidth || 1920,
           height: tempVideo.videoHeight || 1080,
-          preview_thumbnails: [],
         })
         setStartSec(0)
         setEndSec(dur)
       }
       tempVideo.src = URL.createObjectURL(file)
-    } finally {
-      setIsInspecting(false)
     }
   }
 
@@ -67,7 +61,7 @@ export default function VideoUploaderAndTrimmer({
     return `${m.toString().padStart(2, '0')}:${rem.toString().padStart(2, '0')}`
   }
 
-  const handleStartSubmit = () => {
+  const handleSubmit = () => {
     if (!currentFile) return
     onAnalyze({
       file: currentFile,
@@ -77,39 +71,31 @@ export default function VideoUploaderAndTrimmer({
     })
   }
 
-  return (
-    <div className="bg-white dark:bg-[#111625] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-2.5">
-          <div className="p-2 rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
-            <UploadCloud className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-              Загрузка и Инспекция Видеозаписи
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              CCTV видео кассового узла (.mov / .mp4) с опциональной нарезкой интервала
-            </p>
-          </div>
-        </div>
+  const effectiveDuration = enableTrimming
+    ? Math.max(0, endSec - startSec).toFixed(1)
+    : (videoMetadata?.duration_sec?.toFixed(1) || '0')
 
-        {videoMetadata && (
+  return (
+    <div className="bg-white dark:bg-[#16191E] rounded-xl border border-gray-200 dark:border-[#22272E] p-4 sm:p-5 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+          Загрузка видеозаписи
+        </h2>
+        {currentFile && (
           <button
             onClick={() => {
               setCurrentFile(null)
               setVideoMetadata(null)
               setEnableTrimming(false)
             }}
-            className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center space-x-1"
+            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex items-center space-x-1"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Сбросить</span>
+            <RefreshCw className="w-3 h-3" />
+            <span>Выбрать другое видео</span>
           </button>
         )}
       </div>
 
-      {/* Dropzone */}
       {!currentFile ? (
         <div
           onDragOver={(e) => {
@@ -119,10 +105,10 @@ export default function VideoUploaderAndTrimmer({
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-8 sm:p-12 text-center cursor-pointer transition-all ${
+          className={`border border-dashed rounded-lg p-6 sm:p-8 text-center cursor-pointer transition ${
             isDragging
-              ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-950/20 scale-[0.99]'
-              : 'border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50/50 dark:hover:bg-slate-800/20'
+              ? 'border-[#9D1D53] bg-rose-50/40 dark:bg-rose-950/20'
+              : 'border-gray-300 dark:border-[#2E3440] hover:border-gray-400 dark:hover:border-gray-600'
           }`}
         >
           <input
@@ -132,44 +118,36 @@ export default function VideoUploaderAndTrimmer({
             className="hidden"
             onChange={(e) => handleFileChange(e.target.files?.[0])}
           />
-          <div className="flex flex-col items-center justify-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-              <FileVideo className="w-6 h-6 text-slate-500 dark:text-slate-400" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                Перетащите видеофайл сюда или <span className="text-rose-600 dark:text-rose-400">выберите с диска</span>
-              </p>
-              <p className="text-xs text-slate-400 mt-1 font-mono">
-                Поддерживаются форматы .mov, .mp4 (QuickTime, H.264/H.265)
-              </p>
-            </div>
+          <div className="flex flex-col items-center justify-center space-y-2">
+            <UploadCloud className="w-6 h-6 text-gray-400" />
+            <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              Перетащите видеозапись кассы сюда или <span className="text-[#9D1D53] underline">выберите файл</span>
+            </p>
+            <p className="text-[11px] text-gray-400 font-mono">
+              Поддерживаются форматы QuickTime (.mov) и MPEG-4 (.mp4)
+            </p>
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          {/* File & Metadata Info Card */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 gap-3">
-            <div className="flex items-center space-x-3">
-              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-sm">
-                <FileVideo className="w-6 h-6" />
-              </div>
+        <div className="space-y-3">
+          {/* File row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-[#0E1015] border border-gray-200 dark:border-[#22272E] gap-2">
+            <div className="flex items-center space-x-2.5">
+              <FileVideo className="w-5 h-5 text-[#9D1D53] flex-shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-xs sm:max-w-md font-mono">
+                <p className="text-xs font-medium text-gray-900 dark:text-white font-mono truncate max-w-xs sm:max-w-md">
                   {currentFile.name}
                 </p>
-                <div className="flex items-center space-x-2 mt-0.5 text-xs text-slate-500 dark:text-slate-400 font-mono">
+                <div className="flex items-center space-x-2 text-[11px] text-gray-500 font-mono mt-0.5">
                   <span>{(currentFile.size / (1024 * 1024)).toFixed(1)} МБ</span>
                   {videoMetadata && (
                     <>
                       <span>•</span>
                       <span>{videoMetadata.duration_sec?.toFixed(1)}с</span>
                       <span>•</span>
-                      <span>{videoMetadata.fps?.toFixed(1)} FPS</span>
+                      <span>{videoMetadata.fps?.toFixed(0)} FPS</span>
                       <span>•</span>
-                      <span>
-                        {videoMetadata.width}×{videoMetadata.height}
-                      </span>
+                      <span>{videoMetadata.width}×{videoMetadata.height}</span>
                     </>
                   )}
                 </div>
@@ -178,38 +156,34 @@ export default function VideoUploaderAndTrimmer({
 
             <button
               onClick={() => setEnableTrimming(!enableTrimming)}
-              className={`flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
+              className={`flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition ${
                 enableTrimming
-                  ? 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
-                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                  ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 border-transparent'
+                  : 'bg-white dark:bg-[#16191E] text-gray-700 dark:text-gray-300 border-gray-200 dark:border-[#22272E] hover:bg-gray-100'
               }`}
             >
               <Scissors className="w-3.5 h-3.5" />
-              <span>{enableTrimming ? 'Интервал активен' : 'Обрезать интервал (CCTV)'}</span>
+              <span>{enableTrimming ? 'Интервал задан' : 'Обрезать интервал'}</span>
             </button>
           </div>
 
-          {/* Interactive Range Trimmer Bar */}
+          {/* Trimmer controls */}
           {enableTrimming && videoMetadata && (
-            <div className="p-4 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/30 dark:bg-rose-950/20 space-y-3">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-rose-700 dark:text-rose-300 font-medium flex items-center space-x-1">
-                  <Scissors className="w-3.5 h-3.5" />
-                  <span>Нарезка интервала анализа:</span>
-                </span>
-                <span className="text-slate-600 dark:text-slate-400">
+            <div className="p-3.5 rounded-lg border border-gray-200 dark:border-[#22272E] bg-gray-50/50 dark:bg-[#0E1015]/60 space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-mono text-gray-600 dark:text-gray-300">
+                <span>Интервал проверки:</span>
+                <span>
                   {formatSec(startSec)} ({startSec}с) → {formatSec(endSec)} ({endSec}с) •{' '}
-                  <span className="font-semibold text-rose-600 dark:text-rose-400">
-                    Итого: {Math.max(0, endSec - startSec).toFixed(1)} сек
-                  </span>
+                  <strong className="text-gray-900 dark:text-white font-semibold">
+                    {Math.max(0, endSec - startSec).toFixed(1)}с
+                  </strong>
                 </span>
               </div>
 
-              {/* Sliders */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-mono text-slate-500 dark:text-slate-400 block mb-1">
-                    Начало интервала: {startSec}с
+                  <label className="text-[11px] font-mono text-gray-400 block mb-1">
+                    Начало: {startSec}с
                   </label>
                   <input
                     type="range"
@@ -218,12 +192,12 @@ export default function VideoUploaderAndTrimmer({
                     step="0.5"
                     value={startSec}
                     onChange={(e) => setStartSec(parseFloat(e.target.value))}
-                    className="w-full accent-rose-600 cursor-pointer"
+                    className="w-full accent-[#9D1D53] cursor-pointer"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-mono text-slate-500 dark:text-slate-400 block mb-1">
-                    Конец интервала: {endSec}с
+                  <label className="text-[11px] font-mono text-gray-400 block mb-1">
+                    Конец: {endSec}с
                   </label>
                   <input
                     type="range"
@@ -232,58 +206,54 @@ export default function VideoUploaderAndTrimmer({
                     step="0.5"
                     value={endSec}
                     onChange={(e) => setEndSec(parseFloat(e.target.value))}
-                    className="w-full accent-rose-600 cursor-pointer"
+                    className="w-full accent-[#9D1D53] cursor-pointer"
                   />
                 </div>
               </div>
 
-              {/* Physical trim toggle */}
-              <div className="flex items-center justify-between pt-1 border-t border-rose-200/50 dark:border-rose-900/30 text-xs">
-                <label className="flex items-center space-x-2 text-slate-600 dark:text-slate-300 cursor-pointer">
+              <div className="pt-1 flex items-center justify-between text-[11px] text-gray-500 font-mono">
+                <label className="flex items-center space-x-1.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={saveTrimmedOnly}
                     onChange={(e) => setSaveTrimmedOnly(e.target.checked)}
-                    className="rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
+                    className="rounded text-[#9D1D53] focus:ring-0 cursor-pointer"
                   />
-                  <span>Физически нарезать файл на сервере (ffmpeg copy) и освободить диск</span>
+                  <span>Сохранять только обрезанный файл (ffmpeg copy)</span>
                 </label>
                 <button
                   onClick={() => {
                     setStartSec(0)
                     setEndSec(videoMetadata.duration_sec || 30)
                   }}
-                  className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline font-mono"
+                  className="hover:underline text-gray-400"
                 >
-                  Сбросить на 100%
+                  Сбросить
                 </button>
               </div>
             </div>
           )}
 
-          {/* Action Button */}
-          <div className="flex justify-end pt-2">
+          {/* Submit CTA */}
+          <div className="flex justify-end pt-1">
             <button
-              onClick={handleStartSubmit}
+              onClick={handleSubmit}
               disabled={isAnalyzing}
-              className={`flex items-center space-x-2 px-6 py-2.5 rounded-xl font-medium text-sm text-white shadow-sm transition ${
+              className={`flex items-center space-x-2 px-5 py-2 rounded-lg text-xs font-medium text-white transition ${
                 isAnalyzing
-                  ? 'bg-rose-400 cursor-not-allowed'
-                  : 'bg-rose-600 hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-500 shadow-rose-600/20'
+                  ? 'bg-gray-400 dark:bg-gray-700 cursor-not-allowed'
+                  : 'bg-[#9D1D53] hover:bg-[#831644]'
               }`}
             >
               {isAnalyzing ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Идёт локальный AI-анализ 4 стадий...</span>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Проверка видеозаписи...</span>
                 </>
               ) : (
                 <>
-                  <Play className="w-4 h-4 fill-white" />
-                  <span>
-                    Запустить AI-Анализ кассовой дисциплины{' '}
-                    {enableTrimming ? `(${Math.max(0, endSec - startSec).toFixed(1)}с)` : ''}
-                  </span>
+                  <Play className="w-3.5 h-3.5 fill-white" />
+                  <span>Проверить запись ({effectiveDuration}с)</span>
                 </>
               )}
             </button>

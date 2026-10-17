@@ -7,9 +7,6 @@ import {
   VolumeX,
   Maximize2,
   Crosshair,
-  Sparkles,
-  FastForward,
-  Flag,
 } from 'lucide-react'
 
 export default function CCTVPlayer({
@@ -30,7 +27,7 @@ export default function CCTVPlayer({
   const [isReplayingPreRoll, setIsReplayingPreRoll] = useState(false)
   const [targetStopTime, setTargetStopTime] = useState(null)
 
-  // Handle pre-roll replay: Seek to T-5s and play until T, then auto-pause
+  // Replay from T-5s to T, then pause automatically
   useEffect(() => {
     if (!selectedViolation || !videoRef.current) return
     const v = videoRef.current
@@ -50,7 +47,6 @@ export default function CCTVPlayer({
     const cur = videoRef.current.currentTime
     setCurrentTime(cur)
 
-    // Check if we reached the target stop point of the pre-roll replay
     if (isReplayingPreRoll && targetStopTime !== null) {
       if (cur >= targetStopTime) {
         videoRef.current.pause()
@@ -97,13 +93,12 @@ export default function CCTVPlayer({
     return `${m.toString().padStart(2, '0')}:${rem.toString().padStart(2, '0')}`
   }
 
-  // Active bounding box to display
+  // Active bounding box
   let activeBbox = null
   let activeLabel = ''
 
   if (showOverlay && selectedViolation?.evidence_bbox) {
     const tc = selectedViolation.relative_timecode_sec ?? selectedViolation.timecode_sec ?? 0
-    // Show overlay if video is paused near the violation moment (within +-1.5s)
     if (Math.abs(currentTime - tc) <= 1.5 || !isPlaying) {
       activeBbox = selectedViolation.evidence_bbox.bbox_norm
       activeLabel = selectedViolation.evidence_bbox.label
@@ -113,9 +108,9 @@ export default function CCTVPlayer({
   return (
     <div
       ref={containerRef}
-      className="relative rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-md flex flex-col group select-none"
+      className="relative rounded-xl overflow-hidden bg-black border border-gray-200 dark:border-[#22272E] shadow-sm flex flex-col select-none"
     >
-      {/* Video Canvas Container */}
+      {/* Video Viewport */}
       <div className="relative w-full aspect-video flex items-center justify-center bg-black">
         <video
           ref={videoRef}
@@ -128,10 +123,10 @@ export default function CCTVPlayer({
           onClick={togglePlay}
         />
 
-        {/* Bounding Box Targeting Overlay */}
+        {/* Minimal Hairline Bounding Box Targeting Overlay */}
         {activeBbox && activeBbox.length === 4 && (
           <div
-            className="absolute pointer-events-none transition-all duration-150 border-2 border-rose-500 rounded-sm shadow-[0_0_15px_rgba(244,63,94,0.6)]"
+            className="absolute pointer-events-none transition-all duration-100 target-bbox rounded-sm"
             style={{
               left: `${activeBbox[0] * 100}%`,
               top: `${activeBbox[1] * 100}%`,
@@ -139,33 +134,30 @@ export default function CCTVPlayer({
               height: `${(activeBbox[3] - activeBbox[1]) * 100}%`,
             }}
           >
-            {/* Reticle Corner Brackets */}
-            <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-white" />
-            <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-white" />
-            <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-white" />
-            <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-white" />
+            {/* Hairline Corner Brackets */}
+            <div className="absolute -top-1 -left-1 w-2 h-2 border-t-2 border-l-2 border-white" />
+            <div className="absolute -top-1 -right-1 w-2 h-2 border-t-2 border-r-2 border-white" />
+            <div className="absolute -bottom-1 -left-1 w-2 h-2 border-b-2 border-l-2 border-white" />
+            <div className="absolute -bottom-1 -right-1 w-2 h-2 border-b-2 border-r-2 border-white" />
 
-            {/* Label Badge */}
-            <div className="absolute -top-7 left-0 px-2 py-0.5 rounded bg-rose-600 text-white font-mono text-[10px] uppercase font-semibold tracking-wider whitespace-nowrap shadow-sm flex items-center space-x-1">
-              <Crosshair className="w-2.5 h-2.5" />
-              <span>{activeLabel || 'Зона нарушения'}</span>
+            {/* Label badge */}
+            <div className="absolute -top-6 left-0 px-1.5 py-0.5 rounded bg-black/80 text-white font-mono text-[10px] tracking-wide whitespace-nowrap border border-white/20">
+              {activeLabel || 'Зона нарушения'}
             </div>
           </div>
         )}
 
-        {/* Pre-roll active banner */}
+        {/* Active Pre-Roll Pill */}
         {isReplayingPreRoll && (
-          <div className="absolute top-4 left-4 z-20 flex items-center space-x-2 px-3 py-1 rounded-full bg-rose-600/90 text-white text-xs font-mono backdrop-blur-md animate-pulse shadow-md">
-            <Play className="w-3 h-3 fill-white" />
-            <span>
-              ВОСПРОИЗВЕДЕНИЕ T-5с (ДО {targetStopTime?.toFixed(1)}с)
-            </span>
+          <div className="absolute top-3 left-3 z-20 flex items-center space-x-1.5 px-2.5 py-1 rounded bg-black/80 text-white text-[11px] font-mono border border-white/20 backdrop-blur-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+            <span>Контекст: T-5с → {targetStopTime?.toFixed(1)}с</span>
           </div>
         )}
       </div>
 
-      {/* Timeline Scrubber Bar with Violation Pins */}
-      <div className="relative w-full bg-slate-900 px-4 pt-3 pb-2">
+      {/* Scrubber & Heatmap Pins */}
+      <div className="relative w-full bg-[#11141A] px-3.5 pt-2.5 pb-2 text-white">
         <div className="relative w-full flex items-center">
           <input
             type="range"
@@ -174,10 +166,10 @@ export default function CCTVPlayer({
             step="0.1"
             value={currentTime}
             onChange={handleSeek}
-            className="w-full accent-rose-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg appearance-none"
+            className="w-full accent-[#9D1D53] cursor-pointer h-1 bg-gray-700 rounded-lg appearance-none"
           />
 
-          {/* Violation Heatmap Pins pinned on seekbar */}
+          {/* Timeline Incident Pins */}
           {duration > 0 &&
             jobData?.violations?.map((v, idx) => {
               const tc = v.relative_timecode_sec ?? v.timecode_sec ?? 0
@@ -187,27 +179,27 @@ export default function CCTVPlayer({
                 <button
                   key={idx}
                   onClick={() => onSelectViolation(v)}
-                  title={`Перейти к нарушению #${idx + 1} (${tc}с)`}
+                  title={`Инцидент #${idx + 1} (${tc}с)`}
                   style={{ left: `${leftPct}%` }}
-                  className={`absolute -top-1.5 transform -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 transition-all ${
+                  className={`absolute -top-1.5 transform -translate-x-1/2 w-2.5 h-2.5 rounded-full transition-all ${
                     isSelected
-                      ? 'bg-rose-500 border-white scale-125 z-20 shadow-[0_0_8px_rgba(244,63,94,0.9)]'
-                      : 'bg-amber-400 border-slate-900 hover:scale-125 z-10'
+                      ? 'bg-rose-500 ring-2 ring-white scale-125 z-20'
+                      : 'bg-amber-400 hover:scale-125 z-10'
                   }`}
                 />
               )
             })}
         </div>
 
-        {/* Playback Controls Row */}
-        <div className="flex items-center justify-between text-white text-xs font-mono mt-2">
+        {/* Player Controls Bar */}
+        <div className="flex items-center justify-between text-xs font-mono mt-2">
           {/* Left Controls */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5">
             <button
               onClick={togglePlay}
-              className="p-1.5 rounded-lg hover:bg-slate-800 text-white transition"
+              className="p-1 rounded hover:bg-gray-800 text-gray-200 hover:text-white transition"
             >
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
+              {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-white" />}
             </button>
 
             <button
@@ -215,30 +207,28 @@ export default function CCTVPlayer({
                 if (!videoRef.current) return
                 videoRef.current.currentTime = Math.max(0, currentTime - 5)
               }}
-              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition"
+              className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition"
               title="-5 секунд"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-3 h-3" />
             </button>
 
-            <div className="text-[11px] text-slate-300">
-              <span>{formatTime(currentTime)}</span>
-              <span className="text-slate-600 mx-1">/</span>
+            <div className="text-[11px] text-gray-400">
+              <span className="text-gray-200">{formatTime(currentTime)}</span>
+              <span className="text-gray-600 mx-1">/</span>
               <span>{formatTime(duration)}</span>
             </div>
           </div>
 
           {/* Right Controls */}
-          <div className="flex items-center space-x-3">
-            {/* Speed Button */}
+          <div className="flex items-center space-x-2">
             <button
               onClick={changeSpeed}
-              className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white text-[11px] transition"
+              className="px-1.5 py-0.5 rounded bg-gray-800 text-gray-300 hover:text-white text-[10px] transition"
             >
               {playbackSpeed}x
             </button>
 
-            {/* Mute Button */}
             <button
               onClick={() => {
                 if (videoRef.current) {
@@ -246,26 +236,24 @@ export default function CCTVPlayer({
                   setIsMuted(!isMuted)
                 }
               }}
-              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition"
+              className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition"
             >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
             </button>
 
-            {/* AI Bounding Box Overlay Toggle */}
             <button
               onClick={() => setShowOverlay(!showOverlay)}
-              className={`flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-mono border transition ${
+              className={`flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-mono border transition ${
                 showOverlay
-                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                  : 'bg-slate-800 text-slate-500 border-slate-700'
+                  ? 'bg-rose-950/60 text-rose-300 border-rose-800/80'
+                  : 'bg-gray-800 text-gray-500 border-gray-700'
               }`}
-              title="Переключить рамку AI-таргета"
+              title="Переключить рамку таргета"
             >
-              <Crosshair className="w-3 h-3" />
-              <span className="hidden sm:inline">HUD Рамка</span>
+              <Crosshair className="w-2.5 h-2.5" />
+              <span>Рамка</span>
             </button>
 
-            {/* Fullscreen */}
             <button
               onClick={() => {
                 if (!containerRef.current) return
@@ -275,9 +263,9 @@ export default function CCTVPlayer({
                   containerRef.current.requestFullscreen()
                 }
               }}
-              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition"
+              className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition"
             >
-              <Maximize2 className="w-3.5 h-3.5" />
+              <Maximize2 className="w-3 h-3" />
             </button>
           </div>
         </div>
