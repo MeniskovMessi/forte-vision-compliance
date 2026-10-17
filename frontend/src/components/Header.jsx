@@ -1,12 +1,7 @@
 import React from 'react'
-import { Sun, Moon, Play, Scale } from 'lucide-react'
+import { Sun, Moon, Play, BookOpen } from 'lucide-react'
 
-export default function Header({
-  darkMode,
-  onToggleTheme,
-  onReplayIntro,
-  onOpenRegulations,
-}) {
+export default function Header({ darkMode, onToggleTheme, onReplayIntro }) {
   return (
     <header className="shrink-0 z-40 border-b border-gray-200/40 dark:border-[#1A1E26] bg-white dark:bg-[#0D0F12] transition-colors">
       <div className="w-full px-4 sm:px-6 h-12 flex items-center justify-between">
@@ -23,16 +18,6 @@ export default function Header({
 
         {/* Right Actions */}
         <div className="flex items-center space-x-1.5 sm:space-x-2">
-          {/* RK Regulations Button with gray icon */}
-          <button
-            onClick={onOpenRegulations}
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1C2028] transition group"
-            title="Нормативная база и регламенты Республики Казахстан (НБРК)"
-          >
-            <Scale className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" />
-            <span className="hidden sm:inline">Регламенты РК</span>
-          </button>
-
           {/* Replay Screensaver */}
           <button
             onClick={onReplayIntro}
@@ -41,6 +26,15 @@ export default function Header({
           >
             <Play className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Заставка</span>
+          </button>
+
+          {/* Normatives of RK button */}
+          <button
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1C2028] transition"
+            title="Нормативы РК (Нормативные правовые акты НБРК)"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-gray-500 dark:text-zinc-400" />
+            <span className="hidden sm:inline">Нормативы РК</span>
           </button>
 
           {/* Theme Toggle */}
