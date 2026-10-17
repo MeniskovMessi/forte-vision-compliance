@@ -234,8 +234,8 @@ export default function Timeline({
                 style={{ left: `${leftPct}%` }}
                 className="absolute top-1 bottom-[-4px] -translate-x-1/2 z-20 w-3 flex flex-col items-center cursor-pointer group/det"
               >
-                {/* Clean vertical blue detection line */}
-                <div className="w-[2.5px] group-hover/det:w-[3.5px] h-full bg-sky-400 dark:bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.9)] rounded-full transition-all" />
+                {/* Clean vertical blue detection line (Linear flat style, no glow) */}
+                <div className="w-[2px] group-hover/det:w-[3px] h-full bg-sky-500 dark:bg-sky-400 transition-all" />
               </div>
             )
           })}
@@ -249,19 +249,16 @@ export default function Timeline({
           {/* Subtle inactive guide track underneath */}
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gray-200/50 dark:bg-zinc-800/40" />
 
-          {/* Active Red Trimmer Line between trimStart and trimEnd */}
+          {/* Active Red Trimmer Line between trimStart and trimEnd (Flat line, no glow) */}
           <div
             onMouseDown={handleTrimRangeMouseDown}
             style={{
               left: `${trimStartPct}%`,
               width: `${trimWidthPct}%`,
             }}
-            className="absolute top-0 h-[2.5px] bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)] cursor-grab active:cursor-grabbing group/trimline"
+            className="absolute top-0 h-[2px] bg-red-500 cursor-grab active:cursor-grabbing group/trimline"
             title="Перетащите красный отрезок для смещения зоны анализа"
           >
-            {/* Subtle glow on hover of the red line */}
-            <div className="absolute inset-0 -top-1 -bottom-1 bg-red-500/10 opacity-0 group-hover/trimline:opacity-100 transition-opacity" />
-
             {/* 
               LEFT TRIMMER HANDLE: Directed downwards at left end (⎾)
               Seamlessly connected to horizontal red line with zero gap
@@ -277,19 +274,19 @@ export default function Timeline({
                 viewBox="0 0 16 20"
                 fill="none"
                 style={{ position: 'absolute', left: '10px', top: '4px' }}
-                className="text-red-500 filter drop-shadow-sm group-hover/lhandle:text-red-400 transition-colors pointer-events-none"
+                className="text-red-500 group-hover/lhandle:text-red-400 transition-colors pointer-events-none"
               >
                 {/* Continuous corner and downward bracket leg */}
                 <path
-                  d="M10 1.25 L 1.25 1.25 V 15 H 9"
+                  d="M10 1 L 1 1 V 15 H 9"
                   stroke="currentColor"
-                  strokeWidth="2.5"
+                  strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
                 {/* Tactile grip ticks on the downward handle */}
-                <line x1="1.25" y1="6" x2="6.25" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <line x1="1.25" y1="10.5" x2="6.25" y2="10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="1" y1="6" x2="6" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="1" y1="10.5" x2="6" y2="10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
 
@@ -308,19 +305,19 @@ export default function Timeline({
                 viewBox="0 0 16 20"
                 fill="none"
                 style={{ position: 'absolute', right: '10px', top: '4px' }}
-                className="text-red-500 filter drop-shadow-sm group-hover/rhandle:text-red-400 transition-colors pointer-events-none"
+                className="text-red-500 group-hover/rhandle:text-red-400 transition-colors pointer-events-none"
               >
                 {/* Continuous corner and downward bracket leg */}
                 <path
-                  d="M6 1.25 L 14.75 1.25 V 15 H 7"
+                  d="M6 1 L 15 1 V 15 H 7"
                   stroke="currentColor"
-                  strokeWidth="2.5"
+                  strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
                 {/* Tactile grip ticks on the downward handle */}
-                <line x1="14.75" y1="6" x2="9.75" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <line x1="14.75" y1="10.5" x2="9.75" y2="10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="15" y1="6" x2="10" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="15" y1="10.5" x2="10" y2="10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
           </div>
@@ -336,9 +333,9 @@ export default function Timeline({
           className="absolute top-0 bottom-1 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center"
         >
           {/* Top Diamond Pointer */}
-          <div className="w-2.5 h-2.5 bg-red-500 rotate-45 rounded-[1px] shadow-sm transform -translate-y-0.5" />
-          {/* Vertical Playhead Needle Line */}
-          <div className="w-[2px] flex-1 bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
+          <div className="w-2.5 h-2.5 bg-red-500 rotate-45 rounded-[1px] transform -translate-y-0.5" />
+          {/* Vertical Playhead Needle Line (Flat line, no glow) */}
+          <div className="w-[1.5px] flex-1 bg-red-500" />
         </div>
       </div>
 
@@ -351,7 +348,7 @@ export default function Timeline({
             top: `${tooltipPos.y - 65}px`,
             transform: 'translateX(-50%)',
           }}
-          className="z-50 pointer-events-none px-2.5 py-1.5 rounded-md text-xs font-sans shadow-xl border bg-gray-900 text-white border-gray-700 dark:bg-[#1C2028] dark:border-sky-500/40 whitespace-nowrap animate-in fade-in zoom-in-95 duration-150"
+          className="z-50 pointer-events-none px-2.5 py-1.5 rounded-md text-xs font-sans shadow-lg border bg-zinc-950 text-white border-zinc-800 dark:bg-zinc-900 dark:border-zinc-750 whitespace-nowrap animate-in fade-in zoom-in-95 duration-150"
         >
           <div className="flex items-center space-x-1.5 text-sky-400 text-[10px] font-mono uppercase font-semibold">
             <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
