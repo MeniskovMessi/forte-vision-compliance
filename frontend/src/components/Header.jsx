@@ -34,7 +34,7 @@ export default function Header({ darkMode, onToggleTheme, onReplayIntro }) {
             className="p-1.5 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1C2028] transition"
             title={darkMode ? 'Переключить на светлую тему' : 'Переключить на тёмную тему'}
           >
-            {darkMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5" />}
+            {darkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>

@@ -1,26 +1,57 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 
-export default function Screensaver({ onStartExit, onComplete, isReplaying, darkMode }) {
+export default function Screensaver({ onStartExit, onComplete, isReplaying, darkMode, manualDismiss = false }) {
   const [stage, setStage] = useState('active') // 'active' | 'exiting' | 'hidden'
+  const exitingRef = useRef(false)
+  const mountTimeRef = useRef(Date.now())
 
-  useEffect(() => {
-    // Stage 1: Active hold for 1.0s
-    const timer1 = setTimeout(() => {
-      setStage('exiting')
-      if (onStartExit) onStartExit()
-    }, 1000)
+  const exitScreensaver = () => {
+    if (Date.now() - mountTimeRef.current < 150) return
+    if (exitingRef.current) return
+    exitingRef.current = true
+    setStage('exiting')
+    if (onStartExit) onStartExit()
 
-    // Stage 2: Crisp 0.95s fadeout completes at 1000ms + 950ms = 1950ms
-    const timer2 = setTimeout(() => {
+    // 0.95s fadeout completes at 950ms
+    setTimeout(() => {
       setStage('hidden')
       if (onComplete) onComplete()
-    }, 1950)
+    }, 950)
+  }
 
-    return () => {
-      clearTimeout(timer1)
-      clearTimeout(timer2)
+  useEffect(() => {
+    exitingRef.current = false
+    mountTimeRef.current = Date.now()
+    setStage('active')
+
+    if (manualDismiss) {
+      // In manual screensaver mode: do not transition automatically.
+      // Wait until the user clicks with the mouse or presses any key.
+      const handleUserActivity = () => {
+        exitScreensaver()
+      }
+
+      const initTimer = setTimeout(() => {
+        window.addEventListener('pointerdown', handleUserActivity, { once: true })
+        window.addEventListener('keydown', handleUserActivity, { once: true })
+      }, 150)
+
+      return () => {
+        clearTimeout(initTimer)
+        window.removeEventListener('pointerdown', handleUserActivity)
+        window.removeEventListener('keydown', handleUserActivity)
+      }
+    } else {
+      // Automatic 1.0s intro on initial page load
+      const timer1 = setTimeout(() => {
+        exitScreensaver()
+      }, 1000)
+
+      return () => {
+        clearTimeout(timer1)
+      }
     }
-  }, [isReplaying])
+  }, [isReplaying, manualDismiss])
 
   if (stage === 'hidden') return null
 
@@ -28,10 +59,13 @@ export default function Screensaver({ onStartExit, onComplete, isReplaying, dark
 
   return (
     <div
+      onClick={manualDismiss ? exitScreensaver : undefined}
       style={{
         pointerEvents: isExiting ? 'none' : 'auto',
       }}
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden"
+      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden ${
+        manualDismiss && !isExiting ? 'cursor-pointer' : ''
+      }`}
     >
       {/* 
         Full-bleed solid background: Only transitions opacity (NO blur).
@@ -94,6 +128,17 @@ export default function Screensaver({ onStartExit, onComplete, isReplaying, dark
           <span className={darkMode ? 'text-zinc-600' : 'text-gray-300'}>•</span>
           <span>КАССОВЫЙ КОНТРОЛЬ</span>
         </div>
+
+        {/* Interactive manual dismiss hint */}
+        {manualDismiss && (
+          <div
+            className={`mt-8 text-[10px] tracking-[0.25em] uppercase font-mono select-none transition-opacity duration-300 ${
+              darkMode ? 'text-zinc-500' : 'text-gray-400'
+            }`}
+          >
+            [ нажмите в любом месте для продолжения ]
+          </div>
+        )}
       </div>
     </div>
   )

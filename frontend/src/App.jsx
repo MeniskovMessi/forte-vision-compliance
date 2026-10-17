@@ -15,6 +15,7 @@ export default function App() {
 
   // Screensaver state & main page reveal coordination
   const [showScreensaver, setShowScreensaver] = useState(true)
+  const [isManualScreensaver, setIsManualScreensaver] = useState(false)
   const [screensaverKey, setScreensaverKey] = useState(0)
   const [contentRevealed, setContentRevealed] = useState(false)
 
@@ -37,19 +38,24 @@ export default function App() {
 
   const handleReplayIntro = () => {
     setContentRevealed(false)
+    setIsManualScreensaver(true)
     setScreensaverKey((prev) => prev + 1)
     setShowScreensaver(true)
   }
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] dark:bg-[#0D0F12] text-[#111827] dark:text-[#EDEDEF] transition-colors flex flex-col font-sans overflow-x-hidden">
-      {/* 1-Second Screensaver Overlay (Adapts dynamically to Light/Dark theme) */}
+      {/* Screensaver Overlay (Auto on first visit, interactive on demand) */}
       {showScreensaver && (
         <Screensaver
           key={screensaverKey}
           darkMode={darkMode}
+          manualDismiss={isManualScreensaver}
           onStartExit={() => setContentRevealed(true)}
-          onComplete={() => setShowScreensaver(false)}
+          onComplete={() => {
+            setShowScreensaver(false)
+            setIsManualScreensaver(false)
+          }}
           isReplaying={screensaverKey}
         />
       )}
