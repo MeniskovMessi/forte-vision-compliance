@@ -25,8 +25,8 @@ export default function App() {
   // Uploaded video state
   const [uploadedVideo, setUploadedVideo] = useState(null)
 
-  // RK Republic Regulations modal open/close state
-  const [showRegulations, setShowRegulations] = useState(false)
+  // RK Regulations modal state
+  const [showRegulationsModal, setShowRegulationsModal] = useState(false)
 
   // Persist theme to localStorage and sync 'dark' class on html
   useEffect(() => {
@@ -85,7 +85,7 @@ export default function App() {
           darkMode={darkMode}
           onToggleTheme={toggleTheme}
           onReplayIntro={handleReplayIntro}
-          onOpenRegulations={() => setShowRegulations(true)}
+          onOpenRegulations={() => setShowRegulationsModal(true)}
         />
 
         {/* View Switcher: Upload Dropzone vs Unscrollable Editor UI */}
@@ -112,10 +112,10 @@ export default function App() {
         )}
       </div>
 
-      {/* RK Republic Regulations Modal */}
+      {/* RK Regulations Explorer Modal */}
       <RegulationsModal
-        isOpen={showRegulations}
-        onClose={() => setShowRegulations(false)}
+        isOpen={showRegulationsModal}
+        onClose={() => setShowRegulationsModal(false)}
       />
     </div>
   )

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Sun, Moon, Play, BookOpen } from 'lucide-react'
+import { Sun, Moon, Play, Scale } from 'lucide-react'
 
 export default function Header({ darkMode, onToggleTheme, onReplayIntro, onOpenRegulations }) {
   return (
@@ -18,14 +18,15 @@ export default function Header({ darkMode, onToggleTheme, onReplayIntro, onOpenR
 
         {/* Right Actions */}
         <div className="flex items-center space-x-1.5 sm:space-x-2">
-          {/* RK Regulations Button */}
+          {/* RK Republics Regulations Button */}
           <button
             onClick={onOpenRegulations}
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1C2028] hover:text-gray-900 dark:hover:text-white transition"
-            title="Нормативная база регламентов НБРК (Республика Казахстан)"
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#1C2028] transition border border-gray-200/60 dark:border-zinc-800/60"
+            title="Нормативная база кассовой дисциплины Республики Казахстан (НБРК • adilet.zan.kz)"
           >
-            <BookOpen className="w-3.5 h-3.5 text-[#9D1D53]" />
-            <span>Регламенты РК</span>
+            <Scale className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500 shrink-0" />
+            <span className="hidden sm:inline">Регламенты РК</span>
+            <span className="sm:hidden">НПА РК</span>
           </button>
 
           {/* Replay Screensaver */}
