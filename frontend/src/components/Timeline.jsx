@@ -232,9 +232,9 @@ export default function Timeline({
                 }}
                 onMouseLeave={() => setHoveredDetection(null)}
                 style={{ left: `${leftPct}%` }}
-                className="absolute top-1 bottom-[-4px] -translate-x-1/2 z-20 w-3 flex flex-col items-center cursor-pointer group/det"
+                className="absolute top-3 bottom-[-1px] -translate-x-1/2 z-20 w-3 flex flex-col items-center cursor-pointer group/det"
               >
-                {/* Clean vertical blue detection line (Linear flat style, no glow) */}
+                {/* Clean vertical blue detection line (Linear flat style, compact height) */}
                 <div className="w-[2px] group-hover/det:w-[3px] h-full bg-sky-500 dark:bg-sky-400 transition-all" />
               </div>
             )
@@ -286,7 +286,7 @@ export default function Timeline({
                 />
                 {/* Tactile grip ticks on the downward handle */}
                 <line x1="1" y1="6" x2="6" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <line x1="1" y1="10.5" x2="6" y2="10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <line x1="1" y1="10.5" x2="6.25" y2="10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
 
@@ -330,11 +330,11 @@ export default function Timeline({
         {/* ========================================================================= */}
         <div
           style={{ left: `${getPercent(currentTime)}%` }}
-          className="absolute top-0 bottom-1 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center"
+          className="absolute top-1.5 bottom-2.5 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center"
         >
-          {/* Top Diamond Pointer */}
-          <div className="w-2.5 h-2.5 bg-red-500 rotate-45 rounded-[1px] transform -translate-y-0.5" />
-          {/* Vertical Playhead Needle Line (Flat line, no glow) */}
+          {/* Top Diamond Pointer (compact) */}
+          <div className="w-2 h-2 bg-red-500 rotate-45 rounded-[1px] transform -translate-y-0.5" />
+          {/* Vertical Playhead Needle Line (Flat line, compact height) */}
           <div className="w-[1.5px] flex-1 bg-red-500" />
         </div>
       </div>
