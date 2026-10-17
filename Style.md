@@ -79,16 +79,19 @@ Designed for low-light CCTV monitoring rooms using Linear’s signature matte ch
 
 ## 4. Screensaver Identity & Transition Standard
 
-The opening screensaver serves as an editorial brand reveal rather than an animated distraction:
+The opening screensaver serves as an editorial brand reveal rather than an animated distraction, featuring a stylized optical frosted-glass refraction effect (lazydazie-style):
 
-1. **Duration:** Exactly **1.0 second** hold time.
-2. **Theme Adaptation:**
-   - **Light Mode:** Off-white canvas (`#F9FAFB`), deep graphite typography, Forte crimson hairline mark.
-   - **Dark Mode:** Matte obsidian canvas (`#0D0F12`), soft white typography, Forte crimson hairline mark.
-3. **Dissolve Animation:**
-   - Transition: `opacity 2.2s cubic-bezier(0.16, 1, 0.3, 1), filter 2.2s cubic-bezier(0.16, 1, 0.3, 1), transform 2.2s cubic-bezier(0.16, 1, 0.3, 1)`.
-   - Exiting State: `filter: blur(80px)`, `opacity: 0`, `transform: scale(1.06)`.
-   - Unmount: Completely unmounts from the DOM at `3.2s` to free memory and GPU resources.
+1. **Duration:** Exactly **1.5 seconds** active hold time.
+2. **Optical Architecture:**
+   - **Centerpiece:** `P [R I S] M` — anchor letters `P` and `M` with horizontal directional smears bleeding into the middle glass lens slab.
+   - **Frosted Reeded Lens Slab:** Encloses `R I S` with SVG `feTurbulence` + `feDisplacementMap` optical wave distortion, vertical fluted striations, sandblasted micro-grain stipple, top specular hairline, bottom refractive caustic bar, and bottom-right corner curved meniscus bevel.
+3. **Theme Adaptation:**
+   - **Light Mode:** Canvas `#ECEEF2`, pure white card `#FFFFFF` with soft shadow, deep graphite letters `#0D0F12`, frosted acrylic lens.
+   - **Dark Mode:** Canvas `#0D0F12`, matte card `#13161C` with crisp border, pure white letters `#FFFFFF`, smoked obsidian lens.
+4. **Dissolve Animation:**
+   - Transition: `opacity 3.8s cubic-bezier(0.16, 1, 0.3, 1), filter 3.8s cubic-bezier(0.16, 1, 0.3, 1), transform 3.8s cubic-bezier(0.16, 1, 0.3, 1)`.
+   - Exiting State: `filter: blur(48px)`, `opacity: 0`, card scale `1.04`, lens scale `1.12`.
+   - Unmount: Completely unmounts from the DOM at `5.3s` to free memory and GPU resources.
 
 ---
 

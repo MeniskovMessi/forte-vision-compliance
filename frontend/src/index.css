@@ -31,15 +31,15 @@
 /* The Glass Lens Slab Container */
 .glass-slab-lens {
   position: relative;
-  transition: transform 2.2s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 2.2s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 2.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 3.8s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 3.8s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 3.8s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform, box-shadow, opacity;
 }
 
 /* Light theme: Crisp Frosted Acrylic / Optical Glass */
 .glass-slab-light {
-  background: rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(14px) contrast(115%) saturate(110%);
   -webkit-backdrop-filter: blur(14px) contrast(115%) saturate(110%);
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -69,8 +69,8 @@
 .refracted-letters {
   filter: url(#prism-glass-refract);
   display: inline-flex;
-  transition: filter 2.2s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 2.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: filter 3.8s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 3.8s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: filter, transform;
 }
 
@@ -102,30 +102,32 @@
 
 /* Screensaver Presentation Card */
 .screensaver-card {
-  transition: transform 2.2s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 2.2s cubic-bezier(0.16, 1, 0.3, 1),
-              filter 2.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 3.8s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 3.8s cubic-bezier(0.16, 1, 0.3, 1),
+              filter 3.8s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform, opacity, filter;
 }
 
-/* Overall Screensaver Dissolve Transition */
+/* Overall Screensaver Dissolve Transition (3.8s silky smooth fade) */
 .screensaver-overlay {
-  transition: opacity 2.2s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity;
+  transition: opacity 3.8s cubic-bezier(0.16, 1, 0.3, 1),
+              filter 3.8s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, filter;
 }
 
 .screensaver-exiting .screensaver-card {
-  transform: scale(1.03) translateY(-4px) !important;
+  transform: scale(1.04) translateY(-6px) !important;
   opacity: 0 !important;
-  filter: blur(12px) !important;
+  filter: blur(28px) !important;
 }
 
 .screensaver-exiting .glass-slab-lens {
-  transform: scaleX(1.08) scaleY(1.04) !important;
+  transform: scaleX(1.12) scaleY(1.06) !important;
   opacity: 0 !important;
 }
 
 .screensaver-exiting {
   opacity: 0 !important;
+  filter: blur(48px) !important;
   pointer-events: none !important;
 }

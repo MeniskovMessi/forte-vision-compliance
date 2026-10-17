@@ -1,19 +1,31 @@
 import React, { useEffect, useState } from 'react'
 
+/**
+ * PRISM Editorial Screensaver with Stylized Optical Frosted-Glass Refraction
+ * Inspired by lazydazie optical reeded glass lens reference.
+ * 
+ * Features:
+ * - Dynamic Light / Dark mode styling
+ * - SVG feTurbulence + feDisplacementMap optical refraction lens
+ * - Fluted reeded glass vertical striations & sandblasted micro-grain
+ * - Signature optical meniscus refraction bevel in bottom-right corner
+ * - Directional smear bleeding from anchor letters ('P', 'M') into lens ('R I S')
+ * - Cinematic long fadeout: 1.5s hold + 3.8s smooth blur dissolve (5.3s total unmount)
+ */
 export default function Screensaver({ onComplete, isReplaying, darkMode }) {
   const [stage, setStage] = useState('active') // 'active' | 'exiting' | 'hidden'
 
   useEffect(() => {
-    // Stage 1: Active pristine display for 1.0s
+    // Stage 1: Active pristine hold for 1.5s
     const timer1 = setTimeout(() => {
       setStage('exiting')
-    }, 1000)
+    }, 1500)
 
-    // Stage 2: 2.2s cinematic dissolve (completes after 1000ms + 2200ms = 3200ms total)
+    // Stage 2: 3.8s cinematic blur fadeout (completes at 1500ms + 3800ms = 5300ms total)
     const timer2 = setTimeout(() => {
       setStage('hidden')
       if (onComplete) onComplete()
-    }, 3200)
+    }, 5300)
 
     return () => {
       clearTimeout(timer1)
@@ -26,7 +38,7 @@ export default function Screensaver({ onComplete, isReplaying, darkMode }) {
   return (
     <div
       className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center p-4 sm:p-6 screensaver-overlay select-none overflow-hidden ${
-        darkMode ? 'bg-[#0D0F12]' : 'bg-[#F4F5F7]'
+        darkMode ? 'bg-[#0D0F12]' : 'bg-[#ECEEF2]'
       } ${stage === 'exiting' ? 'screensaver-exiting' : 'opacity-100'}`}
     >
       {/* SVG Optical Refraction Filters */}
@@ -39,7 +51,7 @@ export default function Screensaver({ onComplete, isReplaying, darkMode }) {
             <feGaussianBlur in="displaced" stdDeviation="1.5" result="blurred" />
             <feMerge>
               <feMergeNode in="blurred" />
-              <feMergeNode in="displaced" opacity="0.6" />
+              <feMergeNode in="displaced" opacity="0.65" />
             </feMerge>
           </filter>
         </defs>
@@ -49,7 +61,7 @@ export default function Screensaver({ onComplete, isReplaying, darkMode }) {
       <div
         className={`relative w-full max-w-4xl py-16 sm:py-24 px-6 sm:px-12 rounded-2xl flex flex-col items-center justify-center screensaver-card ${
           darkMode
-            ? 'bg-[#12151B] border border-white/[0.08] shadow-[0_30px_70px_-20px_rgba(0,0,0,0.8)]'
+            ? 'bg-[#13161C] border border-white/[0.08] shadow-[0_30px_70px_-20px_rgba(0,0,0,0.85)]'
             : 'bg-white border border-black/[0.05] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.08)]'
         }`}
       >
@@ -66,7 +78,7 @@ export default function Screensaver({ onComplete, isReplaying, darkMode }) {
               }`}
               style={{
                 filter: 'blur(3.5px)',
-                transform: 'translateX(8px) scaleX(1.2)',
+                transform: 'translateX(8px) scaleX(1.25)',
                 clipPath: 'inset(0 0 0 35%)',
                 maskImage: 'linear-gradient(to right, transparent, black)'
               }}
@@ -96,11 +108,11 @@ export default function Screensaver({ onComplete, isReplaying, darkMode }) {
             <div className="absolute inset-0 pointer-events-none fluted-lines opacity-35 mix-blend-overlay" />
 
             {/* Sandblasted Fine Grain Noise Texture */}
-            <div className="absolute inset-0 pointer-events-none grain-stipple opacity-50 mix-blend-multiply dark:mix-blend-overlay" />
+            <div className="absolute inset-0 pointer-events-none grain-stipple opacity-45 mix-blend-multiply dark:mix-blend-overlay" />
 
             {/* Signature Optical Curved Refraction Meniscus in Bottom-Right Corner */}
             <svg
-              className="absolute bottom-0 right-0 w-28 sm:w-36 h-16 sm:h-20 pointer-events-none opacity-50 dark:opacity-70"
+              className="absolute bottom-0 right-0 w-28 sm:w-36 h-16 sm:h-20 pointer-events-none opacity-50 dark:opacity-75"
               viewBox="0 0 140 80"
               fill="none"
             >
@@ -139,7 +151,7 @@ export default function Screensaver({ onComplete, isReplaying, darkMode }) {
               }`}
               style={{
                 filter: 'blur(3.5px)',
-                transform: 'translateX(-8px) scaleX(1.2)',
+                transform: 'translateX(-8px) scaleX(1.25)',
                 clipPath: 'inset(0 35% 0 0)',
                 maskImage: 'linear-gradient(to left, transparent, black)'
               }}
@@ -149,7 +161,7 @@ export default function Screensaver({ onComplete, isReplaying, darkMode }) {
           </div>
         </div>
 
-        {/* Minimal Sub-Caption */}
+        {/* Minimal Sub-Caption (matching editorial bottom credit style) */}
         <div
           className={`mt-10 sm:mt-12 flex items-center space-x-3 text-[10px] sm:text-[11px] tracking-[0.3em] uppercase font-mono ${
             darkMode ? 'text-zinc-500' : 'text-gray-400'
