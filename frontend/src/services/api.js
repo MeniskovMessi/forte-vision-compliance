@@ -64,3 +64,24 @@ export async function compileVideoCuts(file, cuts, drawBbox = true) {
   }
   return res.blob()
 }
+
+export async function fetchJobsList(limit = 50) {
+  const res = await fetch(`${API_BASE}/jobs?limit=${limit}`, {
+    headers: authHeaders,
+  })
+  if (!res.ok) {
+    throw new Error(`Failed to load jobs (${res.status})`)
+  }
+  return res.json()
+}
+
+export async function fetchRegulations() {
+  const res = await fetch(`${API_BASE}/regulations`, {
+    headers: authHeaders,
+  })
+  if (!res.ok) {
+    throw new Error(`Failed to load regulations (${res.status})`)
+  }
+  return res.json()
+}
+

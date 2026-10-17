@@ -6,6 +6,7 @@ export default function Header({
   onToggleTheme,
   onReplayIntro,
   onOpenRegulations,
+  onOpenHistory,
 }) {
   return (
     <header className="shrink-0 z-40 border-b border-gray-200/40 dark:border-[#1A1E26] bg-white dark:bg-[#0D0F12] transition-colors">
@@ -45,6 +46,7 @@ export default function Header({
 
           {/* History Icon */}
           <button
+            onClick={onOpenHistory}
             className="p-1.5 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1C2028] transition"
             title="История проверок"
           >
