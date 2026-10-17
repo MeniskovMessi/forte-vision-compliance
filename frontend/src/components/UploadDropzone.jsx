@@ -24,7 +24,7 @@ export default function UploadDropzone({ onVideoSelect, darkMode }) {
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0]
-      if (file.type.startsWith('video/') || /\.(mp4|mov|avi|mkv|webm|m4v)$/i.test(file.name)) {
+      if (file.type.startsWith('video/') || /\.(mp4|mov|avi|mkv|webm)$/i.test(file.name)) {
         processFile(file)
       } else {
         alert('Пожалуйста, загрузите видеофайл (.mp4, .mov, .avi, .mkv)')
@@ -48,17 +48,19 @@ export default function UploadDropzone({ onVideoSelect, darkMode }) {
     })
   }
 
+  // Pre-load a sample video from datathon if user wants quick test
+  const handleLoadSample = (sampleName) => {
+    // Generate a placeholder video blob or prompt file picker
+    fileInputRef.current?.click()
+  }
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 w-full max-w-4xl mx-auto">
-      {/* 
-        Hidden file input:
-        Explicitly specify extensions (.mov,.mp4,.avi,.mkv) FIRST so Windows File Dialog 
-        immediately displays .mov and video files without requiring "All Files (*.*)".
-      */}
+      {/* Hidden file input with explicit file extensions for Windows Explorer */}
       <input
         ref={fileInputRef}
         type="file"
-        accept=".mov,.mp4,.avi,.mkv,.webm,.m4v,video/*,video/mp4,video/quicktime,video/x-msvideo"
+        accept=".mp4,.mov,.avi,.mkv,.webm,video/*"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -114,10 +116,10 @@ export default function UploadDropzone({ onVideoSelect, darkMode }) {
         {/* Format Hints */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-2 text-[11px] font-mono text-gray-400 dark:text-zinc-500">
           <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-[#1A1E26] border border-gray-200 dark:border-[#262C36]">
-            MOV
+            MP4
           </span>
           <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-[#1A1E26] border border-gray-200 dark:border-[#262C36]">
-            MP4
+            MOV
           </span>
           <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-[#1A1E26] border border-gray-200 dark:border-[#262C36]">
             AVI
@@ -129,16 +131,10 @@ export default function UploadDropzone({ onVideoSelect, darkMode }) {
         </div>
       </div>
 
-      {/* Subtitle explaining what the system does */}
-      <div className="mt-8 max-w-2xl text-center px-4 space-y-2.5">
-        <p className="text-xs sm:text-sm text-gray-500 dark:text-zinc-400 leading-relaxed font-sans">
-          Автоматический видеоконтроль кассовой дисциплины ForteBank: обнаружение оставления наличных денег и открытого сейфа без присмотра, фиксация посторонних лиц и нарушений регламента с привязкой к нормативным актам НБРК.
-        </p>
-        <div className="flex items-center justify-center space-x-2 text-[11px] font-mono text-gray-400 dark:text-zinc-500">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#9D1D53]" />
-          <span>Локальный анализ нейросетями • adilet.zan.kz • Формирование отчёта жюри</span>
-        </div>
-      </div>
+      {/* Concise non-AI factual subtitle under dropzone matching card subtitle size */}
+      <p className="mt-4 text-[11px] text-gray-500 dark:text-gray-400 font-mono tracking-wide text-center">
+        Автоматическая фиксация нарушений кассовой дисциплины и сопоставление с нормами НБРК
+      </p>
     </div>
   )
 }
