@@ -24,16 +24,108 @@
   background: rgba(107, 114, 128, 0.7);
 }
 
-/* Linear-style screensaver transition: 1s hold -> smooth cinematic 2.2s blur dissolve */
-.screensaver-overlay {
-  transition: opacity 2.2s cubic-bezier(0.16, 1, 0.3, 1),
-              filter 2.2s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 2.2s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, filter, transform;
+/* ============================================================
+   STYLIZED FROSTED GLASS REFRACTION & REEDED LENS (lazydazie style)
+   ============================================================ */
+
+/* The Glass Lens Slab Container */
+.glass-slab-lens {
+  position: relative;
+  transition: transform 2.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 2.2s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 2.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow, opacity;
 }
+
+/* Light theme: Crisp Frosted Acrylic / Optical Glass */
+.glass-slab-light {
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(14px) contrast(115%) saturate(110%);
+  -webkit-backdrop-filter: blur(14px) contrast(115%) saturate(110%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 
+    0 16px 36px -12px rgba(0, 0, 0, 0.12),
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -3px 8px 0 rgba(0, 0, 0, 0.35),
+    inset 1.5px 0 3px 0 rgba(255, 255, 255, 0.5),
+    inset -1.5px 0 3px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* Dark theme: Smoked Obsidian Frosted Glass */
+.glass-slab-dark {
+  background: rgba(18, 21, 26, 0.65);
+  backdrop-filter: blur(16px) contrast(125%) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) contrast(125%) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 
+    0 24px 50px -15px rgba(0, 0, 0, 0.8),
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -4px 12px 0 rgba(0, 0, 0, 0.95),
+    inset 1.5px 0 3px 0 rgba(255, 255, 255, 0.15),
+    inset -1.5px 0 3px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* Refracted Text Displacement */
+.refracted-letters {
+  filter: url(#prism-glass-refract);
+  display: inline-flex;
+  transition: filter 2.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 2.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: filter, transform;
+}
+
+/* Sandblasted Fine Grain Noise Texture */
+.grain-stipple {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.38'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+/* Fluted Vertical Striations */
+.fluted-lines {
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.06) 4px,
+    rgba(255, 255, 255, 0.08) 5px
+  );
+}
+.dark .fluted-lines {
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 3px,
+    rgba(255, 255, 255, 0.05) 4px,
+    rgba(0, 0, 0, 0.15) 5px
+  );
+}
+
+/* Screensaver Presentation Card */
+.screensaver-card {
+  transition: transform 2.2s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 2.2s cubic-bezier(0.16, 1, 0.3, 1),
+              filter 2.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity, filter;
+}
+
+/* Overall Screensaver Dissolve Transition */
+.screensaver-overlay {
+  transition: opacity 2.2s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity;
+}
+
+.screensaver-exiting .screensaver-card {
+  transform: scale(1.03) translateY(-4px) !important;
+  opacity: 0 !important;
+  filter: blur(12px) !important;
+}
+
+.screensaver-exiting .glass-slab-lens {
+  transform: scaleX(1.08) scaleY(1.04) !important;
+  opacity: 0 !important;
+}
+
 .screensaver-exiting {
   opacity: 0 !important;
-  filter: blur(80px) !important;
-  transform: scale(1.06) !important;
   pointer-events: none !important;
 }
