@@ -85,10 +85,10 @@ The opening screensaver serves as an editorial brand reveal rather than an anima
 2. **Theme Adaptation:**
    - **Light Mode:** Off-white canvas (`#F9FAFB`), deep graphite typography, Forte crimson hairline mark.
    - **Dark Mode:** Matte obsidian canvas (`#0D0F12`), soft white typography, Forte crimson hairline mark.
-3. **Dissolve Animation:**
-   - Transition: `opacity 3.0s ease-in-out, filter 3.0s ease-in-out, transform 3.0s ease-in-out`.
-   - Exiting State: `filter: blur(80px)`, `opacity: 0`, `transform: scale(1.06)`.
-   - Unmount: Completely unmounts from the DOM at `4.0s` (1.0s active hold + 3.0s dissolve) to free memory and GPU resources.
+3. **Dissolve Animation (Fast & Clean):**
+   - **Background Layer:** Pure `opacity 1.2s cubic-bezier(0.2, 0, 0, 1)`. No blur filter is applied to the background container, ensuring edges and corners stay 100% rectilinear with zero rounded border or inward-curving artifacts.
+   - **Typography Layer:** Soft `opacity 1.2s`, `filter: blur(28px)`, and `transform: scale(1.03)` with `cubic-bezier(0.2, 0, 0, 1)`.
+   - **Lifecycle:** 1.0s active hold $\rightarrow$ 1.2s crisp dissolve $\rightarrow$ completely unmounts from the DOM at `2.2s`.
 
 ---
 
