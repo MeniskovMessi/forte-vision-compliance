@@ -282,6 +282,13 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
       */}
       <div className="w-full md:w-80 lg:w-88 shrink-0 h-full flex flex-col justify-between bg-white dark:bg-[#0D0F12] overflow-y-auto">
         <div className="flex flex-col">
+          {/* Section Header: Инструменты */}
+          <div className="h-9 px-5 border-b border-gray-200/30 dark:border-[#1A1E26] bg-gray-50/40 dark:bg-[#0E1116] flex items-center justify-between shrink-0">
+            <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-semibold text-gray-500 dark:text-zinc-400">
+              Инструменты
+            </span>
+          </div>
+
           {/* Seamless Metadata Rows (No nested cards, clean tabular layout) */}
           <div className="px-5 py-4 space-y-3 border-b border-gray-200/30 dark:border-[#1A1E26]">
             <div className="flex items-center justify-between text-xs font-mono">
