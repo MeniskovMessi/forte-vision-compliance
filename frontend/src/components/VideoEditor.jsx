@@ -8,6 +8,14 @@ import {
   CheckCircle2,
   AlertCircle,
   AlertTriangle,
+  PanelRight,
+  ExternalLink,
+  Clock,
+  Eye,
+  Scale,
+  X,
+  Maximize2,
+  Play,
 } from 'lucide-react'
 import Timeline from './Timeline'
 import { submitVideoAnalysis, pollJobDetailed, compileVideoCuts } from '../services/api'
@@ -39,6 +47,11 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
   const [showBoundingBox, setShowBoundingBox] = useState(false)
   const lastStoppedCheckpointRef = useRef(null)
   const prevTimeRef = useRef(0)
+
+  // Collapsible Detection Details Panel on the right side of the video player
+  const [showDetailsPanel, setShowDetailsPanel] = useState(false)
+  const [activeDetectionId, setActiveDetectionId] = useState(null)
+  const [previewFrameModal, setPreviewFrameModal] = useState(null)
 
   // Compute exact rendered video image rectangle inside the preview container (accounting for object-contain)
   const updateVideoContentBox = useCallback(() => {
@@ -561,16 +574,19 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
                 timecode: parseFloat(Number(tc).toFixed(1)),
                 label: v.type || 'Нарушение кассовой дисциплины',
                 bboxLabel,
+                description: v.description || '',
                 lawRef: v.regulation_reference?.clause_ref || v.regulation_reference?.article || 'НБРК',
                 confidence: v.confidence,
                 ruleCode: v.rule_code,
                 regulation: v.regulation_reference,
                 bboxNorm,
-                evidenceFrames: v.evidence_frames,
+                evidenceFrames: v.evidence_frames || [],
+                replayWindow: v.replay_window,
               }
             })
 
             setDetections(mapped)
+            setActiveDetectionId(null)
             setAnalysisStatus('done')
             setIsAnalyzing(false)
 
@@ -641,20 +657,33 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
     })
   }
 
+  const handleToggleDetailsPanel = () => {
+    setShowDetailsPanel((prev) => {
+      const next = !prev
+      setTimeout(updateVideoContentBox, 40)
+      return next
+    })
+  }
+
+  const displayedDetections =
+    activeDetectionId !== null
+      ? detections.filter((d) => d.id === activeDetectionId)
+      : detections
+
   return (
     <div className="flex-1 min-h-0 w-full h-full flex flex-col md:flex-row overflow-hidden select-none bg-white dark:bg-[#0D0F12]">
       {/* 
         ========================================================================
-        LEFT COLUMN: Video Preview (70%) + Timeline & Transport (30%)
+        LEFT COLUMN: Video Preview + Collapsible Detection Details + Timeline
         ========================================================================
       */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden border-r border-gray-200/40 dark:border-[#1A1E26]">
         {/* Top Mini-Toolbar (Seamless, flush) */}
         <div className="h-9 px-4 border-b border-gray-200/30 dark:border-[#1A1E26] bg-gray-50/40 dark:bg-[#0E1116] flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 min-w-0">
             <button
               onClick={onBack}
-              className="flex items-center space-x-1 px-2 py-0.5 rounded text-xs font-mono text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+              className="flex items-center space-x-1 px-2 py-0.5 rounded text-xs font-mono text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition shrink-0"
               title="Загрузить другое видео"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -666,68 +695,387 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
               <span className="truncate">{videoData?.name}</span>
             </div>
           </div>
+
+          {/* Right side of Top Mini-Toolbar: Toggle Detection Details Panel */}
+          <div className="flex items-center space-x-1.5 shrink-0">
+            <button
+              onClick={handleToggleDetailsPanel}
+              className={`h-6 px-2 rounded text-[11px] font-mono flex items-center space-x-1.5 border transition active:scale-95 ${
+                showDetailsPanel
+                  ? 'bg-gray-200/80 dark:bg-[#191E28] border-gray-300/80 dark:border-[#2B3342] text-gray-900 dark:text-white font-medium'
+                  : 'border-transparent text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200/40 dark:hover:bg-[#151922]'
+              }`}
+              title={
+                showDetailsPanel
+                  ? 'Скрыть панель деталей обнаружения'
+                  : 'Показать детали обнаружения (таймкод, кадры-доказательства, нормативы РК)'
+              }
+            >
+              <PanelRight className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Детали</span>
+              {analysisStatus === 'done' && detections.length > 0 && (
+                <span className="px-1 py-0.2 text-[9px] font-mono rounded bg-sky-500/15 text-sky-600 dark:text-sky-400 font-semibold">
+                  {detections.length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* 
-          Video Preview Container:
-          Dynamically fills available space above the timeline (theme-adaptive canvas)
+          Middle Workspace Area:
+          Left: Video Preview Container (resizes width automatically)
+          Right: Collapsible Detection Details Section (when toggled open)
         */}
-        <div
-          onClick={handlePlayPauseToggle}
-          className="flex-1 min-h-0 bg-gray-100 dark:bg-[#07080B] relative flex items-center justify-center p-3 sm:p-4 overflow-hidden cursor-pointer group transition-colors"
-        >
-          <video
-            ref={videoRef}
-            src={videoData?.url}
-            onLoadedMetadata={handleLoadedMetadata}
-            onTimeUpdate={handleTimeUpdate}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            onEnded={() => setIsPlaying(false)}
-            playsInline
-            className="max-h-full max-w-full object-contain rounded border border-black/5 dark:border-white/5 pointer-events-none"
-          />
+        <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
+          {/* Video Preview Container */}
+          <div
+            onClick={handlePlayPauseToggle}
+            className="flex-1 min-w-0 min-h-0 bg-gray-100 dark:bg-[#07080B] relative flex items-center justify-center p-3 sm:p-4 overflow-hidden cursor-pointer group transition-colors"
+          >
+            <video
+              ref={videoRef}
+              src={videoData?.url}
+              onLoadedMetadata={handleLoadedMetadata}
+              onTimeUpdate={handleTimeUpdate}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={() => setIsPlaying(false)}
+              playsInline
+              className="max-h-full max-w-full object-contain rounded border border-black/5 dark:border-white/5 pointer-events-none"
+            />
 
-          {/* Pixel-exact Bounding Box Overlay aligned to rendered video content rectangle */}
-          {showBoundingBox && currentActiveViolation && currentActiveViolation.bboxNorm && videoContentBox && (
-            <div
-              className="absolute pointer-events-none z-20"
-              style={{
-                left: `${videoContentBox.left}px`,
-                top: `${videoContentBox.top}px`,
-                width: `${videoContentBox.width}px`,
-                height: `${videoContentBox.height}px`,
-              }}
-            >
+            {/* Pixel-exact Bounding Box Overlay aligned to rendered video content rectangle */}
+            {showBoundingBox && currentActiveViolation && currentActiveViolation.bboxNorm && videoContentBox && (
               <div
-                className="absolute pointer-events-none transition-all duration-100"
+                className="absolute pointer-events-none z-20"
                 style={{
-                  left: `${currentActiveViolation.bboxNorm[0] * 100}%`,
-                  top: `${currentActiveViolation.bboxNorm[1] * 100}%`,
-                  width: `${(currentActiveViolation.bboxNorm[2] - currentActiveViolation.bboxNorm[0]) * 100}%`,
-                  height: `${(currentActiveViolation.bboxNorm[3] - currentActiveViolation.bboxNorm[1]) * 100}%`,
+                  left: `${videoContentBox.left}px`,
+                  top: `${videoContentBox.top}px`,
+                  width: `${videoContentBox.width}px`,
+                  height: `${videoContentBox.height}px`,
                 }}
               >
-                {/* Outlined box with hairline corners */}
-                <div className="absolute inset-0 border-2 border-rose-500 bg-rose-500/10 rounded-sm" />
-                <div className="absolute -top-1 -left-1 w-2.5 h-2.5 border-t-2 border-l-2 border-rose-400" />
-                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 border-t-2 border-r-2 border-rose-400" />
-                <div className="absolute -bottom-1 -left-1 w-2.5 h-2.5 border-b-2 border-l-2 border-rose-400" />
-                <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 border-b-2 border-r-2 border-rose-400" />
+                <div
+                  className="absolute pointer-events-none transition-all duration-100"
+                  style={{
+                    left: `${currentActiveViolation.bboxNorm[0] * 100}%`,
+                    top: `${currentActiveViolation.bboxNorm[1] * 100}%`,
+                    width: `${(currentActiveViolation.bboxNorm[2] - currentActiveViolation.bboxNorm[0]) * 100}%`,
+                    height: `${(currentActiveViolation.bboxNorm[3] - currentActiveViolation.bboxNorm[1]) * 100}%`,
+                  }}
+                >
+                  {/* Outlined box with hairline corners */}
+                  <div className="absolute inset-0 border-2 border-rose-500 bg-rose-500/10 rounded-sm" />
+                  <div className="absolute -top-1 -left-1 w-2.5 h-2.5 border-t-2 border-l-2 border-rose-400" />
+                  <div className="absolute -top-1 -right-1 w-2.5 h-2.5 border-t-2 border-r-2 border-rose-400" />
+                  <div className="absolute -bottom-1 -left-1 w-2.5 h-2.5 border-b-2 border-l-2 border-rose-400" />
+                  <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 border-b-2 border-r-2 border-rose-400" />
 
-                {/* Badge Tag */}
-                <div className="absolute -top-6 left-0 px-2 py-0.5 rounded bg-zinc-950/95 border border-rose-500/50 text-rose-300 font-mono text-[10px] tracking-wide whitespace-nowrap shadow-lg flex items-center space-x-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                  <span>{currentActiveViolation.bboxLabel || currentActiveViolation.label || 'Зона нарушения'}</span>
+                  {/* Badge Tag */}
+                  <div className="absolute -top-6 left-0 px-2 py-0.5 rounded bg-zinc-950/95 border border-rose-500/50 text-rose-300 font-mono text-[10px] tracking-wide whitespace-nowrap shadow-lg flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                    <span>{currentActiveViolation.bboxLabel || currentActiveViolation.label || 'Зона нарушения'}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Quick resolution badge (theme-adaptive) */}
-          {videoResolution && (
-            <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded text-[10px] font-mono bg-white/80 dark:bg-black/60 text-gray-700 dark:text-gray-300 border border-gray-200/80 dark:border-white/10 pointer-events-none">
-              {videoResolution.width} × {videoResolution.height}
+            {/* Quick resolution badge (theme-adaptive) */}
+            {videoResolution && (
+              <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded text-[10px] font-mono bg-white/80 dark:bg-black/60 text-gray-700 dark:text-gray-300 border border-gray-200/80 dark:border-white/10 pointer-events-none">
+                {videoResolution.width} × {videoResolution.height}
+              </div>
+            )}
+          </div>
+
+          {/* 
+            Right Side of Video Player: Collapsible Detection Details Section
+            Displays mandatory audit artifacts per Кейс_ForteBank.docx (Section 4, 5, 6, 7)
+          */}
+          {showDetailsPanel && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-80 lg:w-96 xl:w-[400px] shrink-0 h-full border-l border-gray-200/40 dark:border-[#1A1E26] bg-white dark:bg-[#0B0D11] flex flex-col overflow-hidden"
+            >
+              {/* Sub-header */}
+              <div className="h-8 px-4 border-b border-gray-200/30 dark:border-[#1A1E26] bg-gray-50/50 dark:bg-[#0E1116] flex items-center justify-between shrink-0">
+                <span className="text-[10px] font-mono uppercase tracking-[0.14em] font-semibold text-gray-500 dark:text-zinc-400">
+                  Детали обнаружения • НБРК
+                </span>
+                <button
+                  onClick={handleToggleDetailsPanel}
+                  className="p-0.5 rounded text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition"
+                  title="Закрыть панель"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Scrollable Details Content */}
+              <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-200/30 dark:divide-[#1A1E26]">
+                {analysisStatus === 'idle' && (
+                  <div className="p-5 space-y-2.5">
+                    <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                      Ожидание запуска проверки
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-zinc-400 leading-relaxed">
+                      Нажмите «Анализировать видео» в правой колонке. После завершения здесь появятся:
+                    </p>
+                    <ul className="space-y-1.5 text-[11px] font-mono text-gray-500 dark:text-zinc-400">
+                      <li>• Итоговый вердикт проверки</li>
+                      <li>• Тип события и точный таймкод</li>
+                      <li>• Визуальное описание и обоснование</li>
+                      <li>• Кадры-доказательства (1–3 JPEG)</li>
+                      <li>• Документ и пункт НБРК (adilet.zan.kz)</li>
+                    </ul>
+                  </div>
+                )}
+
+                {analysisStatus === 'analyzing' && (
+                  <div className="p-6 text-center space-y-2.5">
+                    <Loader2 className="w-5 h-5 mx-auto text-[#9D1D53] animate-spin" />
+                    <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                      Формирование карточки доказательств...
+                    </div>
+                    <p className="text-[11px] text-gray-400 dark:text-zinc-500">
+                      Извлечение ключевых кадров и сопоставление с нормативными актами РК
+                    </p>
+                  </div>
+                )}
+
+                {analysisStatus === 'error' && (
+                  <div className="p-5 space-y-1.5">
+                    <div className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                      Ошибка получения данных
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-zinc-400">
+                      {analysisError || 'Не удалось загрузить детали анализа'}
+                    </p>
+                  </div>
+                )}
+
+                {analysisStatus === 'done' && (
+                  <>
+                    {/* 1. Overall Verdict Banner (Section 4.3 & 5.3) */}
+                    <div className="px-4 py-3 bg-gray-50/40 dark:bg-[#0E1116]/60">
+                      <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400 dark:text-zinc-500">
+                        Вердикт системы
+                      </div>
+                      {detections.length === 0 ? (
+                        <div className="mt-1 flex items-center space-x-2 text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span className="text-xs font-semibold">Нарушение не обнаружено</span>
+                        </div>
+                      ) : (
+                        <div className="mt-1 flex items-center justify-between">
+                          <div className="flex items-center space-x-2 text-rose-600 dark:text-rose-400">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span className="text-xs font-semibold">
+                              Обнаружены признаки возможных нарушений
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {jobData?.processing_time_sec && (
+                        <div className="mt-1.5 text-[10px] font-mono text-gray-400 dark:text-zinc-500">
+                          Время обработки: {jobData.processing_time_sec} с • Локальный контур
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Multi-violation filter tabs if > 1 */}
+                    {detections.length > 1 && (
+                      <div className="px-4 py-2 flex items-center gap-1.5 flex-wrap bg-gray-50/20 dark:bg-[#0B0D11]">
+                        <button
+                          onClick={() => setActiveDetectionId(null)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-mono border transition ${
+                            activeDetectionId === null
+                              ? 'bg-sky-500/15 border-sky-500/50 text-sky-600 dark:text-sky-300 font-semibold'
+                              : 'border-gray-200 dark:border-[#1E232D] text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-gray-200'
+                          }`}
+                        >
+                          Все ({detections.length})
+                        </button>
+                        {detections.map((d, idx) => (
+                          <button
+                            key={d.id}
+                            onClick={() => {
+                              setActiveDetectionId(d.id)
+                              handleSeek(d.timecode)
+                            }}
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono border transition ${
+                              activeDetectionId === d.id
+                                ? 'bg-sky-500/15 border-sky-500/50 text-sky-600 dark:text-sky-300 font-semibold'
+                                : 'border-gray-200 dark:border-[#1E232D] text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-gray-200'
+                            }`}
+                          >
+                            #{idx + 1} • {d.timecode.toFixed(1)}с
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 2. Detailed Cards for Each Detected Violation (Section 4.4–4.7 & Section 5) */}
+                    {detections.length === 0 ? (
+                      <div className="p-4 text-xs text-gray-500 dark:text-zinc-400 leading-relaxed">
+                        По результатам анализа пространственно-временных действий кассира, состояния сейфа, рабочего стола и терминала признаков нарушений кассовой дисциплины не выявлено.
+                      </div>
+                    ) : (
+                      displayedDetections.map((d) => (
+                        <div key={d.id} className="p-4 space-y-3.5">
+                          {/* Violation Type + Timecode Controls */}
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-semibold">
+                                Событие #{d.id} • {d.timecode.toFixed(1)} с
+                              </span>
+                              <div className="flex items-center space-x-1">
+                                <button
+                                  onClick={() => handleSeek(d.timecode)}
+                                  className="px-2 py-0.5 rounded text-[10px] font-mono border border-gray-200 dark:border-[#222731] bg-gray-50 dark:bg-[#141820] hover:bg-gray-100 dark:hover:bg-[#1B202B] text-gray-700 dark:text-gray-200 flex items-center space-x-1 transition"
+                                  title="Перейти точно к таймкоду нарушения"
+                                >
+                                  <Clock className="w-3 h-3 text-sky-500" />
+                                  <span>К кадру</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const preRoll = Math.max(0, d.timecode - 5.0)
+                                    handleSeek(preRoll)
+                                    if (videoRef.current && videoRef.current.paused) {
+                                      videoRef.current.play()
+                                      setIsPlaying(true)
+                                    }
+                                  }}
+                                  className="px-2 py-0.5 rounded text-[10px] font-mono border border-gray-200 dark:border-[#222731] bg-gray-50 dark:bg-[#141820] hover:bg-gray-100 dark:hover:bg-[#1B202B] text-gray-700 dark:text-gray-200 flex items-center space-x-1 transition"
+                                  title="Воспроизвести за 5 секунд до события (пре-ролл)"
+                                >
+                                  <Play className="w-2.5 h-2.5 text-[#9D1D53]" />
+                                  <span>-5с</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="text-xs font-semibold text-gray-900 dark:text-gray-100 leading-snug">
+                              {d.label}
+                            </div>
+
+                            <div className="flex items-center justify-between text-[10px] font-mono text-gray-400 dark:text-zinc-500">
+                              <span>Зона: {d.bboxLabel || 'Кассовый узел'}</span>
+                              {d.confidence && (
+                                <span>Уверенность: {Math.round(d.confidence * 100)}%</span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Visual Observation & Justification (Section 4.6 & 5.6) */}
+                          {d.description && (
+                            <div className="space-y-1">
+                              <div className="flex items-center space-x-1.5 text-[10px] font-mono uppercase tracking-wider text-gray-400 dark:text-zinc-500">
+                                <Eye className="w-3 h-3 text-sky-500" />
+                                <span>Наблюдение и обоснование</span>
+                              </div>
+                              <div className="p-2.5 rounded border border-gray-200/60 dark:border-[#1B2029] bg-gray-50/50 dark:bg-[#10131A] text-[11px] text-gray-700 dark:text-gray-300 leading-relaxed">
+                                {d.description}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Evidence Frames (Section 4.5, 5.5, 10) */}
+                          {d.evidenceFrames && d.evidenceFrames.length > 0 && (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-gray-400 dark:text-zinc-500">
+                                <span>Кадры-доказательства ({d.evidenceFrames.length})</span>
+                                <span className="text-[9px]">Клик для увеличения</span>
+                              </div>
+                              <div className="grid grid-cols-3 gap-1.5">
+                                {d.evidenceFrames.map((ef, efIdx) => {
+                                  const imgB64 = typeof ef === 'string' ? ef : ef.image_base64
+                                  const efTs = typeof ef === 'object' && ef.timestamp_sec !== undefined ? ef.timestamp_sec : d.timecode
+                                  if (!imgB64) return null
+                                  const srcUrl = imgB64.startsWith('data:')
+                                    ? imgB64
+                                    : `data:image/jpeg;base64,${imgB64}`
+                                  return (
+                                    <div
+                                      key={efIdx}
+                                      onClick={() => {
+                                        handleSeek(Number(efTs))
+                                        setPreviewFrameModal({
+                                          src: srcUrl,
+                                          timestamp: efTs,
+                                          label: d.label,
+                                          bboxLabel: d.bboxLabel,
+                                        })
+                                      }}
+                                      className="group/ef relative rounded overflow-hidden border border-gray-200 dark:border-[#1F242F] bg-black cursor-pointer aspect-video"
+                                      title={`Кадр-доказательство (${efTs} с) — нажмите для увеличения`}
+                                    >
+                                      <img
+                                        src={srcUrl}
+                                        alt={`Evidence ${efTs}s`}
+                                        className="w-full h-full object-cover group-hover/ef:scale-105 transition-transform duration-150"
+                                      />
+                                      <div className="absolute inset-x-0 bottom-0 px-1 py-0.5 bg-black/75 flex items-center justify-between text-[9px] font-mono text-gray-200">
+                                        <span>{ Number(efTs).toFixed(1) }с</span>
+                                        <Maximize2 className="w-2.5 h-2.5 opacity-75 group-hover/ef:opacity-100" />
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Normative Source RK (Section 4.7 & Section 6) */}
+                          {d.regulation && (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center space-x-1.5 text-[10px] font-mono uppercase tracking-wider text-gray-400 dark:text-zinc-500">
+                                <Scale className="w-3 h-3 text-[#9D1D53] dark:text-[#E05285]" />
+                                <span>Нормативный источник РК</span>
+                              </div>
+                              <div className="p-2.5 rounded border border-gray-200/60 dark:border-[#1B2029] bg-gray-50/40 dark:bg-[#10131A] space-y-1.5 text-[11px]">
+                                <div className="font-mono text-[10px] text-[#9D1D53] dark:text-[#E05285] font-semibold">
+                                  {d.regulation.clause_ref || d.lawRef}
+                                </div>
+                                {d.regulation.doc_title && (
+                                  <div className="text-[11px] font-medium text-gray-800 dark:text-gray-200 leading-snug">
+                                    {d.regulation.doc_title}
+                                  </div>
+                                )}
+                                {d.regulation.normative_text && (
+                                  <div className="text-[10px] text-gray-500 dark:text-zinc-400 leading-relaxed border-l-2 border-gray-300 dark:border-zinc-700 pl-2">
+                                    {d.regulation.normative_text}
+                                  </div>
+                                )}
+                                {d.regulation.adilet_url && (
+                                  <div className="pt-1">
+                                    <a
+                                      href={d.regulation.adilet_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center space-x-1 text-[10px] font-mono text-sky-600 dark:text-sky-400 hover:underline"
+                                    >
+                                      <span>Открыть в ИПС «Әділет» (adilet.zan.kz)</span>
+                                      <ExternalLink className="w-2.5 h-2.5" />
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+
+                    {/* Section 7 Disclaimer */}
+                    <div className="p-3.5 text-[10px] text-gray-400 dark:text-zinc-500 leading-relaxed font-sans bg-gray-50/20 dark:bg-[#090B0E]">
+                      Результат сформирован полностью локально (без облачных AI-сервисов и биометрии) и является подсказкой для проверки человеком, а не окончательным дисциплинарным заключением.
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -950,7 +1298,10 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
                       return (
                         <div
                           key={d.id}
-                          onClick={() => handleSeek(d.timecode)}
+                          onClick={() => {
+                            handleSeek(d.timecode)
+                            setActiveDetectionId(d.id)
+                          }}
                           className={`w-full px-5 py-3.5 cursor-pointer transition-colors relative border-l-2 group ${
                             isSelected
                               ? 'border-sky-400 bg-sky-500/5 dark:bg-sky-400/5'
@@ -1015,6 +1366,42 @@ export default function VideoEditor({ videoData, onBack, darkMode }) {
           </button>
         </div>
       </div>
+
+      {/* Evidence Frame Lightbox Modal */}
+      {previewFrameModal && (
+        <div
+          onClick={() => setPreviewFrameModal(null)}
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-3xl w-full rounded-lg border border-zinc-800 bg-[#0D0F14] overflow-hidden shadow-2xl"
+          >
+            <div className="h-9 px-4 border-b border-zinc-800 flex items-center justify-between">
+              <div className="flex items-center space-x-2 text-xs font-mono text-gray-200">
+                <span className="text-rose-400 font-semibold">
+                  Кадр-доказательство • {Number(previewFrameModal.timestamp).toFixed(1)} с
+                </span>
+                <span className="text-zinc-600">|</span>
+                <span className="truncate max-w-md text-gray-400">{previewFrameModal.label}</span>
+              </div>
+              <button
+                onClick={() => setPreviewFrameModal(null)}
+                className="p-1 text-gray-400 hover:text-white transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-3 bg-black flex items-center justify-center">
+              <img
+                src={previewFrameModal.src}
+                alt="Evidence Frame Full"
+                className="max-h-[75vh] w-auto object-contain rounded"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
