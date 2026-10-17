@@ -349,32 +349,23 @@ export default function Timeline({
       {/* 
         =========================================================================
         INTEGRATED CONTROLS ROW:
-        Moved up directly to the timeline section — no separation, no borders
+        Directly inside timeline — center buttons mathematically anchored
         =========================================================================
       */}
-      <div className="w-full mt-3 flex items-center justify-between select-none">
+      <div className="relative w-full mt-3 flex items-center justify-between select-none min-h-[32px]">
         {/* Left: Digital Timecode Counter */}
-        <div className="flex items-center space-x-3">
-          <div className="flex items-baseline space-x-1 font-mono text-xs">
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {formatTimecode(currentTime)}
-            </span>
-            <span className="text-gray-400 dark:text-zinc-600">/</span>
-            <span className="text-gray-500 dark:text-zinc-400 text-[11px]">
-              {formatTimecode(duration)}
-            </span>
-          </div>
-
-          {detections.length > 0 && (
-            <span className="hidden sm:inline-flex items-center space-x-1.5 px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
-              <span>Нарушений: {detections.length}</span>
-            </span>
-          )}
+        <div className="flex items-center space-x-1 font-mono text-xs tabular-nums">
+          <span className="font-semibold text-gray-900 dark:text-white">
+            {formatTimecode(currentTime)}
+          </span>
+          <span className="text-gray-400 dark:text-zinc-600">/</span>
+          <span className="text-gray-500 dark:text-zinc-400 text-[11px]">
+            {formatTimecode(duration)}
+          </span>
         </div>
 
-        {/* Center: Move Left, Play/Pause, Move Right Buttons */}
-        <div className="flex items-center space-x-1.5">
+        {/* Center: Move Left, Play/Pause, Move Right Buttons (Strictly anchored at exact center) */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center space-x-1.5">
           {/* Move Left: to previous detected checkpoint or to the beginning */}
           <button
             onClick={onPrevCheckpoint}
@@ -407,7 +398,7 @@ export default function Timeline({
           </button>
         </div>
 
-        {/* Right: Playback Speed Toggle */}
+        {/* Right: Playback Speed Toggle (Fixed width to avoid any layout shifts) */}
         <div className="flex items-center space-x-2">
           {onChangePlaybackRate && (
             <button
@@ -416,10 +407,10 @@ export default function Timeline({
                 const nextIdx = (rates.indexOf(playbackRate) + 1) % rates.length
                 onChangePlaybackRate(rates[nextIdx])
               }}
-              className="flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-mono text-gray-600 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-[#1E232B] border border-gray-200/60 dark:border-[#22272E] transition"
+              className="w-14 flex items-center justify-center space-x-1 px-1.5 py-0.5 rounded text-[11px] font-mono tabular-nums text-gray-600 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-[#1E232B] border border-gray-200/60 dark:border-[#22272E] transition"
               title="Скорость воспроизведения"
             >
-              <Gauge className="w-3 h-3" />
+              <Gauge className="w-3 h-3 shrink-0" />
               <span>{playbackRate}x</span>
             </button>
           )}
