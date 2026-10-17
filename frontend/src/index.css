@@ -24,16 +24,16 @@
   background: rgba(107, 114, 128, 0.7);
 }
 
-/* Linear-style screensaver transition: 1s hold -> smooth cinematic 1.5s blur dissolve */
+/* Linear-style screensaver transition: 1s hold -> smooth cinematic 2.2s blur dissolve */
 .screensaver-overlay {
-  transition: opacity 1.5s cubic-bezier(0.16, 1, 0.3, 1),
-              filter 1.5s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 2.2s cubic-bezier(0.16, 1, 0.3, 1),
+              filter 2.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 2.2s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, filter, transform;
 }
 .screensaver-exiting {
   opacity: 0 !important;
-  filter: blur(64px) !important;
-  transform: scale(1.05) !important;
+  filter: blur(80px) !important;
+  transform: scale(1.06) !important;
   pointer-events: none !important;
 }
