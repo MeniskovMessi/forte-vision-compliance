@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { Upload, FileVideo, ShieldCheck, Sparkles, FolderOpen } from 'lucide-react'
+import { Upload, FolderOpen } from 'lucide-react'
 
 export default function UploadDropzone({ onVideoSelect, darkMode }) {
   const [isDragging, setIsDragging] = useState(false)
@@ -24,7 +24,7 @@ export default function UploadDropzone({ onVideoSelect, darkMode }) {
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0]
-      if (file.type.startsWith('video/') || /\.(mp4|mov|avi|mkv|webm)$/i.test(file.name)) {
+      if (file.type.startsWith('video/') || /\.(mp4|mov|avi|mkv|webm|m4v)$/i.test(file.name)) {
         processFile(file)
       } else {
         alert('Пожалуйста, загрузите видеофайл (.mp4, .mov, .avi, .mkv)')
@@ -48,19 +48,17 @@ export default function UploadDropzone({ onVideoSelect, darkMode }) {
     })
   }
 
-  // Pre-load a sample video from datathon if user wants quick test
-  const handleLoadSample = (sampleName) => {
-    // Generate a placeholder video blob or prompt file picker
-    fileInputRef.current?.click()
-  }
-
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 w-full max-w-4xl mx-auto">
-      {/* Hidden file input */}
+      {/* 
+        Hidden file input:
+        Explicitly specify extensions (.mov,.mp4,.avi,.mkv) FIRST so Windows File Dialog 
+        immediately displays .mov and video files without requiring "All Files (*.*)".
+      */}
       <input
         ref={fileInputRef}
         type="file"
-        accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,video/*"
+        accept=".mov,.mp4,.avi,.mkv,.webm,.m4v,video/*,video/mp4,video/quicktime,video/x-msvideo"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -116,10 +114,10 @@ export default function UploadDropzone({ onVideoSelect, darkMode }) {
         {/* Format Hints */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-2 text-[11px] font-mono text-gray-400 dark:text-zinc-500">
           <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-[#1A1E26] border border-gray-200 dark:border-[#262C36]">
-            MP4
+            MOV
           </span>
           <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-[#1A1E26] border border-gray-200 dark:border-[#262C36]">
-            MOV
+            MP4
           </span>
           <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-[#1A1E26] border border-gray-200 dark:border-[#262C36]">
             AVI
@@ -131,42 +129,14 @@ export default function UploadDropzone({ onVideoSelect, darkMode }) {
         </div>
       </div>
 
-      {/* Feature Badges under Dropzone */}
-      <div className="mt-6 w-full grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
-        <div className="p-3 rounded-lg border border-gray-200 dark:border-[#22272E] bg-white/60 dark:bg-[#12151B]/60 backdrop-blur-sm flex items-start space-x-2.5">
-          <ShieldCheck className="w-4 h-4 text-[#9D1D53] shrink-0 mt-0.5" />
-          <div>
-            <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
-              100% Локальный анализ
-            </div>
-            <div className="text-[11px] text-gray-500 dark:text-gray-400">
-              Видео не покидает контур системы
-            </div>
-          </div>
-        </div>
-
-        <div className="p-3 rounded-lg border border-gray-200 dark:border-[#22272E] bg-white/60 dark:bg-[#12151B]/60 backdrop-blur-sm flex items-start space-x-2.5">
-          <FileVideo className="w-4 h-4 text-[#9D1D53] shrink-0 mt-0.5" />
-          <div>
-            <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
-              Интерактивный таймлайн
-            </div>
-            <div className="text-[11px] text-gray-500 dark:text-gray-400">
-              Навигация по таймкодам нарушений
-            </div>
-          </div>
-        </div>
-
-        <div className="p-3 rounded-lg border border-gray-200 dark:border-[#22272E] bg-white/60 dark:bg-[#12151B]/60 backdrop-blur-sm flex items-start space-x-2.5">
-          <Sparkles className="w-4 h-4 text-[#9D1D53] shrink-0 mt-0.5" />
-          <div>
-            <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
-              Нормативная база НБРК
-            </div>
-            <div className="text-[11px] text-gray-500 dark:text-gray-400">
-              Векторная привязка статей adilet.zan.kz
-            </div>
-          </div>
+      {/* Subtitle explaining what the system does */}
+      <div className="mt-8 max-w-2xl text-center px-4 space-y-2.5">
+        <p className="text-xs sm:text-sm text-gray-500 dark:text-zinc-400 leading-relaxed font-sans">
+          Автоматический видеоконтроль кассовой дисциплины ForteBank: обнаружение оставления наличных денег и открытого сейфа без присмотра, фиксация посторонних лиц и нарушений регламента с привязкой к нормативным актам НБРК.
+        </p>
+        <div className="flex items-center justify-center space-x-2 text-[11px] font-mono text-gray-400 dark:text-zinc-500">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#9D1D53]" />
+          <span>Локальный анализ нейросетями • adilet.zan.kz • Формирование отчёта жюри</span>
         </div>
       </div>
     </div>
