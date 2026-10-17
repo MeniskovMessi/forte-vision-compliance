@@ -13,7 +13,7 @@ import base64
 import logging
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Any
 import cv2
 import numpy as np
 
@@ -214,12 +214,165 @@ class SpatialPerceptionEngine:
                 kept.append(cand)
         return kept
 
-    def extract_video_timeline(self, video_path: Path) -> Tuple[List[FrameSpatialState], Dict[float, np.ndarray], Dict]:
+    @staticmethod
+    def inspect_video(video_path: Path) -> Dict[str, Any]:
         """
-        Processes a video at `self.sample_fps` and returns:
-        1. `timeline`: List of `FrameSpatialState`
+        Quickly inspects a CCTV video file and returns duration, FPS, resolution,
+        and 3 preview thumbnails (start, mid, end) encoded as base64 JPEGs for UI trimming.
+        """
+        cap, tmp_path = SpatialPerceptionEngine._open_video_safe(video_path)
+        if not cap.isOpened():
+            raise RuntimeError(f"Cannot open video file: {video_path}")
+
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        duration_sec = round(total_frames / fps, 2) if fps > 0 else 0.0
+
+        preview_indices = sorted(set([0, max(0, total_frames // 2), max(0, total_frames - 5)]))
+        thumbnails = []
+        cur_idx = 0
+        for target_idx in preview_indices:
+            while cur_idx < target_idx:
+                if not cap.grab():
+                    break
+                cur_idx += 1
+            ret, frm = cap.read()
+            cur_idx += 1
+            if ret and frm is not None:
+                thumb = cv2.resize(frm, (480, 270))
+                thumbnails.append({
+                    "timestamp_sec": round(target_idx / fps, 2),
+                    "frame_base64": SpatialPerceptionEngine.encode_frame_base64(thumb, quality=80),
+                })
+
+        cap.release()
+        if tmp_path and tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+
+        return {
+            "filename": Path(video_path).name,
+            "duration_sec": duration_sec,
+            "fps": round(fps, 2),
+            "total_frames": total_frames,
+            "width": width,
+            "height": height,
+            "preview_thumbnails": thumbnails,
+        }
+
+    @staticmethod
+    def trim_video_file(
+        input_path: Path,
+        output_path: Path,
+        start_sec: float = 0.0,
+        end_sec: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """
+        Trims a CCTV video to [start_sec, end_sec] and writes the trimmed clip to `output_path`.
+        Uses lossless ffmpeg stream copy when available on PATH, with automatic OpenCV VideoWriter fallback.
+        """
+        import shutil
+        import subprocess
+
+        cap, tmp_path = SpatialPerceptionEngine._open_video_safe(input_path)
+        if not cap.isOpened():
+            raise RuntimeError(f"Cannot open video file for trimming: {input_path}")
+
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        orig_duration = total_frames / fps if fps > 0 else 0.0
+
+        s_sec = max(0.0, float(start_sec or 0.0))
+        e_sec = min(orig_duration, float(end_sec)) if end_sec is not None and end_sec > 0 else orig_duration
+        if e_sec <= s_sec:
+            cap.release()
+            raise ValueError(f"Invalid trim interval: start_sec ({s_sec}) must be less than end_sec ({e_sec}).")
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        ffmpeg_bin = shutil.which("ffmpeg")
+        if ffmpeg_bin:
+            cap.release()
+            if tmp_path and tmp_path.exists():
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
+            cmd = [
+                ffmpeg_bin, "-y",
+                "-ss", f"{s_sec:.2f}",
+                "-to", f"{e_sec:.2f}",
+                "-i", str(input_path),
+                "-c", "copy",
+                str(output_path),
+            ]
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if res.returncode == 0 and output_path.exists() and output_path.stat().st_size > 0:
+                return {
+                    "output_path": str(output_path),
+                    "original_duration_sec": round(orig_duration, 2),
+                    "start_sec": round(s_sec, 2),
+                    "end_sec": round(e_sec, 2),
+                    "trimmed_duration_sec": round(e_sec - s_sec, 2),
+                    "method": "ffmpeg_stream_copy",
+                }
+            # Re-open for OpenCV fallback if ffmpeg failed
+            cap, tmp_path = SpatialPerceptionEngine._open_video_safe(input_path)
+
+        # OpenCV frame-accurate writer fallback
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        writer = cv2.VideoWriter(str(output_path), fourcc, fps, (width, height))
+        start_f = max(0, int(round(s_sec * fps)))
+        end_f = min(total_frames, int(round(e_sec * fps)))
+
+        cur_f = 0
+        written = 0
+        while cur_f < end_f:
+            if cur_f < start_f:
+                if not cap.grab():
+                    break
+                cur_f += 1
+                continue
+            ret, frame = cap.read()
+            if not ret:
+                break
+            writer.write(frame)
+            written += 1
+            cur_f += 1
+
+        writer.release()
+        cap.release()
+        if tmp_path and tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+
+        return {
+            "output_path": str(output_path),
+            "original_duration_sec": round(orig_duration, 2),
+            "start_sec": round(s_sec, 2),
+            "end_sec": round(e_sec, 2),
+            "trimmed_duration_sec": round(written / fps, 2) if fps > 0 else round(e_sec - s_sec, 2),
+            "method": "opencv_videowriter",
+        }
+
+    def extract_video_timeline(
+        self,
+        video_path: Path,
+        start_sec: Optional[float] = None,
+        end_sec: Optional[float] = None,
+    ) -> Tuple[List[FrameSpatialState], Dict[float, np.ndarray], Dict]:
+        """
+        Processes a video (or a trimmed interval `[start_sec, end_sec]`) at `self.sample_fps` and returns:
+        1. `timeline`: List of `FrameSpatialState` (timestamps relative to interval start `0..interval_dur`)
         2. `sampled_frames`: Dict mapping `round(timestamp_sec, 1)` -> BGR frame
-        3. `meta`: Video metadata & calibrated workspace zones
+        3. `meta`: Video metadata, trim offsets, & calibrated workspace zones
         """
         self._load_models()
         cap, tmp_path = self._open_video_safe(video_path)
@@ -230,19 +383,40 @@ class SpatialPerceptionEngine:
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        duration_sec = total_frames / fps if fps > 0 else 0.0
+        orig_duration_sec = total_frames / fps if fps > 0 else 0.0
+
+        trim_start = max(0.0, float(start_sec)) if start_sec is not None and start_sec > 0 else 0.0
+        trim_end = (
+            min(orig_duration_sec, float(end_sec))
+            if end_sec is not None and end_sec > 0
+            else orig_duration_sec
+        )
+        if trim_end <= trim_start:
+            trim_start, trim_end = 0.0, orig_duration_sec
+
+        start_frame = max(0, int(round(trim_start * fps)))
+        end_frame = min(total_frames, int(round(trim_end * fps))) if total_frames > 0 else 10**9
+        is_trimmed = (trim_start > 0.0) or (end_sec is not None and trim_end < orig_duration_sec - 0.1)
 
         step = max(1, int(round(fps / self.sample_fps)))
         raw_frames: List[Tuple[int, float, np.ndarray]] = []
         frame_idx = 0
 
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            if frame_idx % step == 0:
-                t_sec = round(frame_idx / fps, 2)
-                raw_frames.append((frame_idx, t_sec, frame))
+        while frame_idx < end_frame:
+            if frame_idx < start_frame:
+                if not cap.grab():
+                    break
+                frame_idx += 1
+                continue
+            if (frame_idx - start_frame) % step == 0:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                rel_t_sec = round((frame_idx - start_frame) / fps, 2)
+                raw_frames.append((frame_idx, rel_t_sec, frame))
+            else:
+                if not cap.grab():
+                    break
             frame_idx += 1
 
         cap.release()
@@ -531,7 +705,11 @@ class SpatialPerceptionEngine:
             "total_frames": total_frames,
             "width": width,
             "height": height,
-            "duration_sec": round(duration_sec, 2),
+            "original_duration_sec": round(orig_duration_sec, 2),
+            "duration_sec": round(trim_end - trim_start, 2),
+            "trim_start_sec": round(trim_start, 2),
+            "trim_end_sec": round(trim_end, 2),
+            "is_trimmed": is_trimmed,
             "zones": zones,
         }
         return timeline, sampled_frames, meta

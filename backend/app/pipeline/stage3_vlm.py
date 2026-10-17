@@ -11,7 +11,7 @@ import json
 import logging
 import urllib.request
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Any
 import numpy as np
 from dotenv import load_dotenv
 
@@ -37,11 +37,13 @@ class LocalVLMVerifier:
     def select_evidence_frames(
         sampled_frames: Dict[float, np.ndarray],
         peak_sec: float,
+        trim_offset_sec: float = 0.0,
         max_frames: int = 3,
-    ) -> List[str]:
+    ) -> List[Dict[str, Any]]:
         """
         Extracts up to `max_frames` (1-3) base64-encoded JPEG frames centered on `peak_sec`
-        (e.g. peak_sec - 1s, peak_sec, peak_sec + 1s).
+        (e.g. peak_sec - 1s, peak_sec, peak_sec + 1s), returning objects:
+        `[{"timestamp_sec": 18.0, "image_base64": "/9j/4AAQ..."}]`.
         """
         if not sampled_frames:
             return []
@@ -60,25 +62,28 @@ class LocalVLMVerifier:
             closest = min(available_ts, key=lambda t: abs(t - peak_sec))
             chosen_ts = [closest]
 
-        b64_frames = []
+        ev_list: List[Dict[str, Any]] = []
         for t in chosen_ts[:max_frames]:
             b64 = SpatialPerceptionEngine.encode_frame_base64(sampled_frames[t], quality=85)
             if b64:
-                b64_frames.append(b64)
-        return b64_frames
+                ev_list.append({
+                    "timestamp_sec": round(float(trim_offset_sec + t), 1),
+                    "image_base64": b64,
+                })
+        return ev_list
 
     def verify_and_describe(
         self,
         rule_code: str,
         timecode_sec: int,
         base_observation: str,
-        evidence_frames_b64: List[str],
+        evidence_frames: List[Dict[str, Any]],
     ) -> str:
         """
         Returns a factual Russian visual description of the violation at `timecode_sec`.
         If local Ollama VLM is explicitly enabled and reachable on localhost, enriches the observation.
         """
-        if not self.enable_ollama or not evidence_frames_b64:
+        if not self.enable_ollama or not evidence_frames:
             return base_observation
 
         try:
@@ -87,11 +92,12 @@ class LocalVLMVerifier:
                 "визуальный факт нарушения на кадре без упоминания личностей или биометрии. "
                 f"Контекст детектора (таймкод {timecode_sec} сек.): {base_observation}"
             )
-            mid_frame = evidence_frames_b64[len(evidence_frames_b64) // 2]
+            mid_item = evidence_frames[len(evidence_frames) // 2]
+            mid_b64 = mid_item["image_base64"] if isinstance(mid_item, dict) else str(mid_item)
             payload = json.dumps({
                 "model": self.vlm_model,
                 "prompt": prompt,
-                "images": [mid_frame],
+                "images": [mid_b64],
                 "stream": False,
                 "options": {"temperature": 0.1, "num_predict": 90},
             }).encode("utf-8")

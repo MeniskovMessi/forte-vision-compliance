@@ -14,6 +14,11 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 
+try:
+    from sentence_transformers import SentenceTransformer
+except Exception:
+    SentenceTransformer = None
+
 logger = logging.getLogger("pipeline.stage4_rag")
 
 
@@ -46,9 +51,13 @@ class LegalRAGGroundingEngine:
     def _get_embedder(self):
         if self._embedder is None:
             try:
-                from sentence_transformers import SentenceTransformer
+                if SentenceTransformer is None:
+                    raise RuntimeError("SentenceTransformer not available")
                 logger.info(f"Loading local embedding model: {self.embed_model_name}")
-                self._embedder = SentenceTransformer(self.embed_model_name)
+                try:
+                    self._embedder = SentenceTransformer(self.embed_model_name, local_files_only=True)
+                except Exception:
+                    self._embedder = SentenceTransformer(self.embed_model_name)
             except Exception as e:
                 logger.warning(f"Could not load SentenceTransformer ({e}); using rule_code lookup.")
                 self._embedder = False
