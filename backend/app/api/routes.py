@@ -28,6 +28,7 @@ from fastapi.responses import FileResponse, Response
 from backend.app.config import settings
 from backend.app.auth import verify_api_key
 from backend.app.db.repository import repository
+from backend.app.schemas import JobStatusJuryResponse, AnalyzeSubmitResponse
 from backend.app.pipeline.orchestrator import CompliancePipelineOrchestrator
 from backend.app.pipeline.stage1_spatial import SpatialPerceptionEngine
 
@@ -144,6 +145,7 @@ async def health_check() -> Dict[str, Any]:
 
 @router.post(
     "/analyze",
+    response_model=AnalyzeSubmitResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Submit a CCTV video (.mov/.mp4) for asynchronous compliance analysis (with optional interval trimming)",
 )
@@ -215,6 +217,7 @@ async def analyze_video_endpoint(
 
 @router.get(
     "/jobs/{job_id}",
+    response_model=JobStatusJuryResponse,
     summary="Poll analysis job status and retrieve detected cash discipline violations (Jury API Schema)",
 )
 async def get_job_status_endpoint(
@@ -245,22 +248,38 @@ async def get_job_status_endpoint(
             "error_message": job.get("error_message"),
         }
 
-    # Format strict Jury API violations array
+    # Format strict Jury API violations array (Case Section 10 Specification)
     jury_violations = []
-    for v in job.get("violations", []):
-        clean_ev = [
-            {
-                "timestamp_sec": ef.get("timestamp_sec", 0.0),
-                "image_base64": ef.get("image_base64", ""),
-            }
-            for ef in v.get("evidence_frames", [])
-            if isinstance(ef, dict)
-        ]
+    for v in (job.get("violations") or []):
+        raw_frames = v.get("evidence_frames") or []
+        clean_ev = []
+        for ef in raw_frames:
+            if isinstance(ef, dict):
+                ts = float(ef.get("timestamp_sec") if ef.get("timestamp_sec") is not None else v.get("timecode_sec", 0.0))
+                b64 = str(ef.get("image_base64") or "")
+            elif isinstance(ef, str):
+                ts = float(v.get("timecode_sec", 0.0))
+                b64 = ef
+            else:
+                continue
+
+            # Strip web Data URI scheme if present (e.g. data:image/jpeg;base64,...)
+            if b64.startswith("data:image"):
+                b64 = b64.split(",", 1)[-1]
+            b64 = b64.strip()
+
+            if b64:
+                clean_ev.append({
+                    "timestamp_sec": round(ts, 1),
+                    "image_base64": b64,
+                })
+
+        # Case Section 10 strictly requires 1 to 3 evidence frames
         jury_violations.append({
-            "type": v.get("type", ""),
-            "timecode_sec": v.get("timecode_sec", 0),
-            "description": v.get("description", ""),
-            "evidence_frames": clean_ev,
+            "type": str(v.get("type", "")),
+            "timecode_sec": round(float(v.get("timecode_sec", 0.0)), 1),
+            "description": str(v.get("description", "")),
+            "evidence_frames": clean_ev[:3],
         })
 
     return {
