@@ -14,18 +14,19 @@
 
 | Параметр | Значение |
 | :--- | :--- |
+| **Публичный адрес Web UI** | `https://b75a-79-142-63-116.ngrok-free.app` |
+| **Публичный адрес API** | `https://b75a-79-142-63-116.ngrok-free.app/api/v1` |
+| **Публичный Swagger / OpenAPI** | `https://b75a-79-142-63-116.ngrok-free.app/docs` |
 | **Локальный адрес API** | `http://localhost:8000` |
-| **Адрес Swagger / OpenAPI** | `http://localhost:8000/docs` |
-| **Адрес Web-интерфейса** | `http://localhost:5173` (dev) или `http://localhost:8000` (prod) |
 | **Заголовок авторизации** | `X-API-Key: fortebank-datathon-2026-secret-key` |
 | **Формат входных файлов** | `.mov` (H.264 / ProRes, ~29 FPS, без звука) |
 | **Максимальное время анализа** | $< 18$ секунд на видео (при лимите в 5 минут) |
 
-### Пример проверки через cURL
+### Пример проверки через cURL (по публичному адресу жюри)
 
 #### Шаг 1: Отправка видео на анализ (POST)
 ```bash
-curl -X POST http://localhost:8000/api/v1/analyze \
+curl -X POST https://b75a-79-142-63-116.ngrok-free.app/api/v1/analyze \
      -H "X-API-Key: fortebank-datathon-2026-secret-key" \
      -F "file=@dataset/open/videos/X-1.mov"
 ```
@@ -41,7 +42,7 @@ curl -X POST http://localhost:8000/api/v1/analyze \
 
 #### Шаг 2: Получение статуса и результатов проверки (GET)
 ```bash
-curl -X GET http://localhost:8000/api/v1/jobs/3f2a9c1e \
+curl -X GET https://b75a-79-142-63-116.ngrok-free.app/api/v1/jobs/3f2a9c1e \
      -H "X-API-Key: fortebank-datathon-2026-secret-key"
 ```
 **Результат при обнаружении нарушения (строгая схема жюри, Раздел 10):**
