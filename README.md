@@ -291,6 +291,20 @@ python scripts/test_api.py
 python scripts/evaluate_dataset.py --fast-cache
 ```
 
+### Шаг 6: Запуск публичного доступа для жюри (ngrok)
+Для предоставления публичного HTTPS-доступа удаленному проверочному скрипту жюри (Раздел 10 и FAQ п. 23):
+```bash
+# Запуск через PowerShell:
+powershell scripts/start_tunnel.ps1
+
+# Или двойным кликом по:
+scripts/start_tunnel.bat
+```
+Туннель на порту `8000` одновременно раздает:
+- **Веб-интерфейс оператора:** `https://<SUBDOMAIN>.ngrok-free.app/`
+- **Jury Compliance REST API:** `https://<SUBDOMAIN>.ngrok-free.app/api/v1`
+- **Интерактивная документация:** `https://<SUBDOMAIN>.ngrok-free.app/docs`
+
 ---
 
 ## 8. Ограничения решения и известные краевые случаи
